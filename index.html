@@ -401,6 +401,11 @@ input.invalid,textarea.invalid,.inp.invalid{border-color:var(--red)!important;ba
   .banner .row .inp{max-width:none!important;flex:1 1 100%}
 }
 @supports (height:100dvh){.chat{height:calc(100dvh - 130px)}}
+
+.proj-count small,.proj-count span{white-space:nowrap}
+body.home .proj{grid-template-columns:minmax(0,1fr) auto!important}
+.home-head .mono{white-space:nowrap}
+.role-badge{max-width:none!important;overflow:visible!important;text-overflow:clip!important;white-space:nowrap}
 </style>
 <script>
 /* ============ SUPABASE KEYS: paste yours here ============
@@ -835,8 +840,8 @@ function roBanner() { return S.canWrite ? "" : '<div class="banner warn">You hav
 function renderHomeMain() {
   var ps = Object.keys(S.projects).map(function (k) { return S.projects[k]; }).filter(function (p) { return !p.archived; })
     .sort(function (a, b) { return (lastDelivery(a) || "9") < (lastDelivery(b) || "9") ? -1 : 1; });
-  var h = '<div>' + roBanner() + (myMember() ? "" : identityBanner()) + '<div class="home-head"><h1 class="h-display">Productions</h1>' + (ps.length ? '<span class="mono muted">' + ps.length + " active</span>" : "") + "</div>";
-  if (!ps.length) return h + '<div class="empty">No productions yet. Use <strong>New production</strong> at the top right to start one.</div></div>';
+  var h = '<div>' + roBanner() + (myMember() ? "" : identityBanner()) + '<div class="home-head"><h1 class="h-display">Productions</h1>' + (ps.length ? '<span class="mono muted">' + ps.length + " active</span>" : "") + (ps.length && S.isAdmin ? '<button class="btn btn-quiet" data-act="import-data" style="margin-left:auto">Import data</button>' : "") + "</div>";
+  if (!ps.length) return h + '<div class="empty">No productions yet. Use <strong>New production</strong> at the top right to start one.' + (S.canWrite ? '<div style="margin-top:14px"><button class="btn" data-act="import-data">Import data from old version</button></div>' : '') + '</div></div>';
   h += '<div class="proj-list">';
   ps.forEach(function (p) {
     var st = S.homeStats[p.id], ld = lastDelivery(p), dl = ld ? daysBetween(today(), ld) : null;
@@ -1758,6 +1763,62 @@ A["task-done"] = function () {
 };
 document.addEventListener("input", function (e) { var el = e.target; if (el.classList && el.classList.contains("invalid") && el.value.trim()) el.classList.remove("invalid"); });
 
+
+/* ---------- import from old version ---------- */
+A["import-data"] = function () {
+  var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
+  inp.onchange = function () {
+    var f = inp.files[0]; if (!f) return;
+    f.text().then(function (t) {
+      var d = JSON.parse(t), docs = d.docs || {}, paths = Object.keys(docs);
+      if (!paths.length) return toast("That file has no data.");
+      var np = paths.filter(function (p) { return /^projects\/[^/]+$/.test(p); }).length;
+      if (!confirm("Import " + np + " production" + (np === 1 ? "" : "s") + " and " + paths.length + " records? Existing records with the same id are replaced.")) return;
+      toast("Importing…");
+      paths.sort(function (a, b) { return a.split("/").length - b.split("/").length; });
+      var i = 0;
+      (function next() {
+        var batch = paths.slice(i, i + 20); i += 20;
+        if (!batch.length) { toast("Imported " + np + " production" + (np === 1 ? "" : "s") + "."); return; }
+        Promise.all(batch.map(function (p) { return S.db.doc(p).set(docs[p]); })).then(next, function () { toast("Import stopped. Try again."); });
+      })();
+    }).catch(function () { toast("That isn't a pipeline export file."); });
+  };
+  inp.click();
+};
+
+
+/* ---------- restored data: Cognitive Botics + team (runs once per database) ---------- */
+function seedRestore() {
+  if (!S.db || !S.canWrite || seedRestore.done) return; seedRestore.done = true;
+  S.db.collection("meta").get().then(function (snap) {
+    if (snap.docs.some(function (d) { return d.id === "restore-cb"; })) return;
+    var team = [["apoorv", "Apoorv", "Creative Director"], ["saksham", "Saksham", "Producer, EP and Ops"], ["swapnil", "Swapnil", "Creative Architect and Writer"],
+      ["uthkarsha", "Uthkarsha", "Creative Producer"], ["srestha", "Srestha", "Client POC"], ["meghana", "Meghana", "Project Manager"], ["saahil", "Saahil", "Associate Creative Director"]];
+    var jobs = team.map(function (t, i) {
+      var ex = S.team[t[0]];
+      return ex ? upd("team/" + t[0], { role: t[2], order: i }) : put("team/" + t[0], { id: t[0], name: t[1], role: t[2], email: "", userId: null, order: i });
+    });
+    var exists = Object.keys(S.projects).some(function (k) { return /cognitive botics/i.test(S.projects[k].name || ""); });
+    if (!exists) {
+      var pid = "cognitive-botics";
+      var p = { id: pid, name: "Cognitive Botics", client: "Cognitive Botics", ppmDate: "2026-09-29", shootDate: "2026-10-01", archived: false, createdAt: Date.now(), createdBy: S.me.id,
+        deliverables: [
+          { id: "film-one", name: "Film One", type: "film", firstCut: "2026-10-06", finalCut: "2026-10-09" },
+          { id: "film-two", name: "Film Two", type: "film", firstCut: "2026-10-09", finalCut: "2026-10-13" },
+          { id: "performance-ads", name: "Performance Ads", type: "reel", delivery: "2026-10-06" }
+        ] };
+      jobs.push(put("projects/" + pid, p).then(function () {
+        return Promise.all(buildStages(p, pid).map(function (s) {
+          if (s.data.key === "script_lock") s.data.owners = ["saksham", "apoorv", "swapnil"];
+          return put(stagePath(pid, s.id), s.data);
+        }));
+      }).then(function () { logIt(pid, "restored the production from the old version"); }));
+    }
+    Promise.all(jobs).then(function () { put("meta/restore-cb", { at: Date.now() }); });
+  }).catch(function () { seedRestore.done = false; });
+}
+
 /* ---------- boot ---------- */
 render();
 function backend() {
@@ -1779,7 +1840,7 @@ function backend() {
       S.me = w[0]; S.isAdmin = !!w[0].isOwner; S.canWrite = w[1] !== false;
       B.use("assets").then(function (a) { S.assets = a; render(); });
       ensureChat("all"); var got = { t: false, p: false };
-      function ready() { if (got.t && got.p && !S.ready) { S.ready = true; onRoute(); } else render(); if (S.ready) alertsSoon(); }
+      function ready() { if (got.t && got.p && !S.ready) { S.ready = true; onRoute(); seedRestore(); } else render(); if (S.ready) alertsSoon(); }
       subs.base.push(S.db.collection("team").onSnapshot(function (snap) { var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); S.team = o; got.t = true; ready(); }, function (e) { toast(errMsg(e)); }));
       subs.base.push(S.db.collection("projects").onSnapshot(function (snap) { var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); var first = !got.p; S.projects = o; got.p = true; ready(); if (!first && S.route.v === "home") loadHomeStats(); }, function (e) { toast(errMsg(e)); }));
     });

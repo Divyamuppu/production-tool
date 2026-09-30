@@ -61,4 +61,13 @@ drop policy if exists "pp files delete" on storage.objects;
 create policy "pp files read" on storage.objects for select to anon, authenticated using (bucket_id = 'pipeline-files');
 create policy "pp files upload" on storage.objects for insert to anon, authenticated with check (bucket_id = 'pipeline-files');
 create policy "pp files delete" on storage.objects for delete to anon, authenticated using (bucket_id = 'pipeline-files');
-
+-- Team (Cognitive Botics production is created automatically on first load)
+insert into public.docs (path, col, id, data) values
+  ('team/apoorv',    'team', 'apoorv',    '{"id":"apoorv","name":"Apoorv","role":"Creative Director","email":"","userId":null,"order":0}'),
+  ('team/saksham',   'team', 'saksham',   '{"id":"saksham","name":"Saksham","role":"Producer, EP and Ops","email":"","userId":null,"order":1}'),
+  ('team/swapnil',   'team', 'swapnil',   '{"id":"swapnil","name":"Swapnil","role":"Creative Architect and Writer","email":"","userId":null,"order":2}'),
+  ('team/uthkarsha', 'team', 'uthkarsha', '{"id":"uthkarsha","name":"Uthkarsha","role":"Creative Producer","email":"","userId":null,"order":3}'),
+  ('team/srestha',   'team', 'srestha',   '{"id":"srestha","name":"Srestha","role":"Client POC","email":"","userId":null,"order":4}'),
+  ('team/meghana',   'team', 'meghana',   '{"id":"meghana","name":"Meghana","role":"Project Manager","email":"","userId":null,"order":5}'),
+  ('team/saahil',    'team', 'saahil',    '{"id":"saahil","name":"Saahil","role":"Associate Creative Director","email":"","userId":null,"order":6}')
+on conflict (path) do nothing;
