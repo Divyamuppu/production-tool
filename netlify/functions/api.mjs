@@ -11,7 +11,7 @@ const okField = (k) => typeof k === "string" && /^[A-Za-z0-9_]{1,64}$/.test(k);
 
 
 // ---------- auth: email sign-up / sign-in with a magic link ----------
-const REQUIRE_LOGIN = process.env.REQUIRE_LOGIN !== "false";
+const REQUIRE_LOGIN = process.env.REQUIRE_LOGIN === "true";
 const APPROVERS = (process.env.APPROVER_EMAILS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
 const DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
 const FROM = process.env.MAIL_FROM;

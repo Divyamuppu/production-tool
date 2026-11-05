@@ -26,13 +26,15 @@ Go to Netlify → your site → **Site configuration → Environment variables**
 ## 3. Push to GitHub
 Netlify deploys automatically. The site serves the app, `/api` (the database), and a job that sends emails every minute.
 
-## Sign in
-- Open the site, enter your email, and tap the link in the email. That's it: no separate sign-up.
-- First-time emails are added to the Team automatically (name taken from the email, editable on the Team tab). Emails already on the Team are matched to that person.
-- People stay signed in for a year on that device and in the installed app.
+## Header
+- **Sign in with Gmail** (first button): emails you trigger (tags, assignments) are sent from your own Gmail. Needs `googleClientId` at the top of index.html. Create it at console.cloud.google.com → Credentials → OAuth client ID → Web application; set Authorised JavaScript origins to your site URL; enable the Gmail API; add your team as test users on the consent screen.
+- **Install app**: adds the pipeline to the phone or desktop home screen.
+- **Posting as**: pick your name so ticks, tags and sign-offs are credited to you.
+- No sign-in screen. Anyone with the link can open it.
 
 ## Email notifications
-- Tags, assignments, sign-offs and "needs review" alerts are queued and sent every minute by `netlify/functions/send-outbox.mjs`.
+- If you're signed in with Gmail, emails you trigger go straight from your Gmail.
+- Otherwise they're queued and sent every minute by `netlify/functions/send-outbox.mjs` through Resend (needs RESEND_API_KEY and MAIL_FROM).
 - Sign-in links are sent straight away.
 - Both send from `MAIL_FROM` through Resend, using a domain you have verified in Resend.
 
@@ -45,7 +47,7 @@ The app opens full screen with the a-tom. icon, and loads instantly even on a we
 ## Notes
 - Live updates refresh every 3 seconds while the app is open.
 - Uploaded files must be under 5.5 MB. Add bigger files (cuts, decks) as links.
-- Only signed-in people can read or edit the data, and see uploaded files.
+- Anyone with the site link can read and edit. Set REQUIRE_LOGIN=true in Netlify to require an emailed sign-in link instead.
 - Check the email queue in Neon's SQL Editor:
   ```sql
   select data->>'toName', data->>'to', data->>'status', data->>'error', updated_at

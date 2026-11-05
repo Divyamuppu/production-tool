@@ -423,19 +423,40 @@ body.home .proj{grid-template-columns:minmax(0,1fr) auto!important}
 .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(11,20,38,.08)}
 .signout{border:0;background:none;color:var(--muted);font-size:13px;padding:4px 6px;text-decoration:underline;cursor:pointer}
 .signout:hover{color:var(--blue)}
+.top .wrap{flex-wrap:wrap;height:auto!important;min-height:68px;padding-top:10px!important;padding-bottom:10px!important;row-gap:10px}
+.tb{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.tb .btn{height:44px;border-radius:12px;padding:0 16px;font-weight:600;white-space:nowrap;background:#fff;border-color:var(--line)}
+.tb .btn:hover{border-color:var(--blue)}
+.tb .tb-blue,.tb .btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.tb .tb-dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.tb .tb-new{padding:0 22px;box-shadow:0 6px 18px rgba(36,71,240,.28)}
+.tb .bell{width:44px;height:44px;border-radius:12px;background:#fff}
+.tb-as{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);white-space:nowrap}
+.tb-as select{height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 12px;font-size:14px;color:var(--ink);min-width:130px}
+@media (max-width:720px){
+  .top .wrap{min-height:0;padding-top:8px!important;padding-bottom:8px!important}
+  .tb{width:100%;margin-left:0;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tb::-webkit-scrollbar{display:none}
+  .tb > *{flex:none}
+  .tb-as span{display:none}
+  .tb-as select{font-size:16px}
+}
 </style>
 <script>
 /* ============ SETTINGS ============ */
 window.PIPELINE_CONFIG = {
   backend: "neon",       // "neon" = shared database via /api, "local" = this browser only
   apiBase: "/api",
-  approverCode: "change-me" // open the link once with ?approver=change-me to get sign-off rights
+  googleClientId: ""        // Google OAuth Web client ID, for "Sign in with Gmail" (emails go from your own Gmail)
 };
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
 </script>
 <script src="neon-adapter.js"></script>
 <script src="local-adapter.js"></script>
 </head><body>
-<header class="top"><div class="wrap"><a class="mark" href="#/" aria-label="a-tom. home"><img src="data:image/png;base64,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" alt="a-tom."></a><span class="mark-sub">Production pipeline</span><div class="me" id="me"></div><div class="bell-root" id="bell-root"></div><div id="hdr-act" style="display:flex"></div></div></header>
+<header class="top"><div class="wrap"><a class="mark" href="#/" aria-label="a-tom. home"><img src="data:image/png;base64,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" alt="a-tom."></a><span class="mark-sub">Production pipeline</span><div class="tb" id="tb"></div><div id="me" hidden></div><div id="bell-root" hidden></div><div id="hdr-act" hidden></div></div></header>
 <main id="app"></main><div id="sheet-root"></div><div id="notif-root"></div><div id="chat-root"></div><div id="toast" class="toast" hidden role="status"></div>
 <script>/* ===== a-tom. production pipeline template ===== */
 var PHASES = ["Script", "Screenplay and boards", "Pre-production", "PPM", "Shoot", "Post", "Delivery"];
@@ -448,7 +469,7 @@ var TPL = {
     desc: "The locked script turned into shootable scenes.",
     items: ["Every scene has a heading: location, interior or exterior, time of day", "All action, dialogue and VO beats written out", "On-screen text and supers written in", "Estimated screen time per scene adds up to the target duration", "Read-through with the director and writer done", "Locked screenplay filed and linked below"] },
   sensitivity: { name: "Sensitivity review", phase: 1, owners: [], anchor: "ppm", off: -1,
-    desc: "Makes sure people and subjects are shown accurately and respectfully. If the film has no sensitive subject, the approver overrides this with a reason.",
+    desc: "Makes sure people and subjects are shown accurately and respectfully. If the film has no sensitive subject, override this with a reason.",
     items: ["Screenplay reviewed by a subject expert", "Expert notes shared with the director", "Brand has reviewed how the subject is portrayed", "Notes worked into the screenplay"] },
   storyboard: { name: "Storyboard and shot list", phase: 1, owners: [], anchor: "ppm", off: -1,
     desc: "Every shot decided before the shoot, so nothing gets figured out on set.",
@@ -469,7 +490,7 @@ var TPL = {
     desc: "From briefs to a cast the client has approved and who are booked. Every role needs at least 3 shortlisted options before this can be marked complete.",
     items: ["Character brief written for every role", "Briefs shared with the casting team", "Minimum 3 shortlisted options for every role, added below", "Auditions or look tests done for every shortlisted option", "Internal pick made for every role", "Client approval on the final cast", "Availability and fees locked for the shoot date", "Backup option held for every key role"] },
   consent: { name: "Child and talent welfare", phase: 2, owners: [], anchor: "shoot", off: -1,
-    desc: "Required when the cast includes children or vulnerable people. Otherwise the approver overrides this with a reason.",
+    desc: "Required when the cast includes children or vulnerable people. Otherwise override this with a reason.",
     items: ["Signed consent from parents or guardians", "Working hours and breaks planned within limits", "Guardian confirmed for the full shoot", "Rest area arranged on set", "Crew briefed on set conduct around children"] },
   locations: { name: "Locations", phase: 2, owners: [], anchor: "ppm", off: -1,
     desc: "Every location found, checked and booked.",
@@ -816,9 +837,7 @@ function restoreInputs(c) {
 }
 function render() {
   var c = captureInputs(), cc = captureChat();
-  document.getElementById("me").innerHTML = renderMe();
-  document.getElementById("bell-root").innerHTML = renderBell();
-  document.getElementById("hdr-act").innerHTML = S.ready && S.canWrite && S.route.v !== "new" ? '<button class="btn btn-primary hdr-new" data-act="new">+<span> New production</span></button>' : "";
+  document.getElementById("tb").innerHTML = renderToolbar();
   document.body.classList.toggle("home", S.route.v === "home");
   document.getElementById("chat-root").innerHTML = renderChatDrawer() + renderLauncher();
   document.getElementById("notif-root").innerHTML = S.ready ? (S.mustAck && !S.task ? renderAck() : "") + (S.notifOpen ? renderNotif() : "") + renderTask() : "";
@@ -839,17 +858,17 @@ function render() {
 function renderMe() {
   if (!S.ready) return "";
   var m = myMember(), n = m ? m.name : (S.me.name || "");
-  return (S.me.avatarUrl ? '<img alt="" src="' + esc(S.me.avatarUrl) + '">' : "") + "<span>" + esc(n || S.me.email || "Signed in") + "</span>" + (S.isAdmin ? '<span class="role-badge">Approver</span>' : "") + (S.auth && S.me.email ? '<button class="signout" data-act="sign-out">Sign out</button>' : "");
+  return (S.me.avatarUrl ? '<img alt="" src="' + esc(S.me.avatarUrl) + '">' : "") + "<span>" + esc(n || S.me.email || "Signed in") + "</span>" + "" + (S.auth && S.me.email ? '<button class="signout" data-act="sign-out">Sign out</button>' : "");
 }
 function identityBanner() {
-  if (myMember()) return emailBanner();
+  return myMember() ? emailBanner() : "";
   if (!S.me.id || !S.canWrite) return "";
   var free = members().filter(function (m) { return !m.userId; });
   return '<div class="banner info"><strong>Which one are you?</strong> Pick your name so your ticks and sign-offs are credited to you.<div class="row" style="margin-top:10px">' +
     free.map(function (m) { return '<button class="btn" data-act="claim" data-mid="' + esc(m.id) + '">' + esc(m.name) + "</button>"; }).join("") +
     '<input class="inp" style="max-width:180px" placeholder="Or add your name" data-keep="claim-new"><button class="btn" data-act="claim-new">Add me</button></div></div>';
 }
-function roBanner() { return S.canWrite ? "" : '<div class="banner warn">You have view access only. Ask the approver for Editor access to update stages and upload files.</div>'; }
+function roBanner() { return S.canWrite ? "" : '<div class="banner warn">You have view access only. Ask the team for Editor access to update stages and upload files.</div>'; }
 
 /* home */
 function renderHomeMain() {
@@ -949,7 +968,7 @@ function renderPipeline(p, st, list) {
   var items = [];
   late.forEach(function (s) { var x = st[s.id]; items.push([s, x, x.locked ? "Past deadline and still locked: " + x.blockers.map(function (b) { return S.stages[b].name + (S.stages[b].deliv ? " (" + delivName(s.pid, S.stages[b].deliv) + ")" : ""); }).slice(0, 2).join(", ") + (x.blockers.length > 2 ? " and " + (x.blockers.length - 2) + " more" : "") + " not signed off" : "Due " + fmtDate(s.due) + ", owned by " + ownerNames(s)]); });
   itemLate.forEach(function (s) { var x = st[s.id]; items.push([s, x, x.lateItems + " checklist item" + (x.lateItems > 1 ? "s" : "") + " past deadline, owned by " + ownerNames(s)]); });
-  waiting.forEach(function (s) { if (!st[s.id].overdue) items.push([s, st[s.id], "Marked complete. Needs the approver's sign-off."]); });
+  waiting.forEach(function (s) { if (!st[s.id].overdue) items.push([s, st[s.id], "Marked complete."]); });
   review.forEach(function (s) { if (!st[s.id].overdue) items.push([s, st[s.id], s.flagReason || "Something upstream changed."]); });
   if (items.length) h += '<ul class="attn-list">' + items.slice(0, 8).map(function (it) {
     return '<li><button data-act="open" data-sid="' + esc(it[0].id) + '">' + glyph(it[1].status) + '<span><span class="sr-name">' + esc(label(it[0])) + '</span><br><span class="why">' + esc(it[2]) + '</span></span><span class="due' + (it[1].overdue ? " late" : "") + '">' + esc(fmtDate(it[0].due)) + "</span></button></li>";
@@ -973,7 +992,7 @@ function renderPlate(st, list) {
   if (!m && !S.isAdmin) return '<div class="empty">Pick your name above to see what\'s on your plate.</div>';
   if (S.isAdmin) {
     var w = list.filter(function (s) { return st[s.id].status === "awaiting" || st[s.id].status === "review"; });
-    h += '<div class="block"><h3>Waiting for your sign-off</h3>' + (w.length ? '<ul class="stages">' + w.map(function (s) { return "<li>" + stageRow(s, st[s.id]) + "</li>"; }).join("") + "</ul>" : '<p class="muted">Nothing waiting.</p>') + "</div>";
+    h += '<div class="block"><h3>Ready to complete</h3>' + (w.length ? '<ul class="stages">' + w.map(function (s) { return "<li>" + stageRow(s, st[s.id]) + "</li>"; }).join("") + "</ul>" : '<p class="muted">Nothing waiting.</p>') + "</div>";
   }
   if (m) {
     var mine = list.filter(function (s) { return ownersOf(s).indexOf(m.id) >= 0 && !st[s.id].done; });
@@ -992,7 +1011,7 @@ function renderLog() {
   }).join("");
 }
 function renderTeam(st, list) {
-  var h = '<div class="block"><p class="desc">Owners are assigned per stage, and a stage can have more than one. Share this page with the team as Editors so they can upload files. Only the approver can sign off or override.</p>';
+  var h = '<div class="block"><p class="desc">Owners are assigned per stage, and a stage can have more than one. Share this page with the team as Editors so they can upload files. Anyone on the team can complete or override a stage.</p>';
   members().forEach(function (m) {
     if (S.ui.editMember === m.id) {
       h += '<div class="team-row" style="grid-template-columns:1fr"><div class="grid2"><label class="field">Name<input class="inp" data-keep="tm-e-name" value="' + esc(m.name) + '"></label><label class="field">Role<input class="inp" data-keep="tm-e-role" value="' + esc(m.role || "") + '"></label><label class="field">Email<input class="inp" type="email" data-keep="tm-e-email" value="' + esc(m.email || "") + '"></label></div>' +
@@ -1028,7 +1047,7 @@ function renderSheet(s) {
   h += '<p class="desc" style="margin-top:14px">' + esc(s.desc || "") + "</p>";
   // gate
   if (x.locked) h += '<div class="gate locked"><strong>Locked.</strong> Opens when these are signed off:<ul>' + x.blockers.map(function (b) { var bs = S.stages[b]; return '<li><button data-act="open" data-sid="' + esc(b) + '">' + esc(label(bs)) + ": " + esc(STATUS_TXT[st[b].status]).toLowerCase() + ", " + esc(ownerNames(bs)) + "</button></li>"; }).join("") + '</ul><p class="hint" style="margin:8px 0 0">You can still park files, links and notes here.</p></div>';
-  else if (x.status === "review") h += '<div class="gate review"><strong>Needs review.</strong> ' + esc(s.flagReason || "Something upstream changed.") + " Was signed off " + esc(fmtTime(x.so.at)) + ". The approver confirms it still holds, or it gets reopened.</div>";
+  else if (x.status === "review") h += '<div class="gate review"><strong>Needs review.</strong> ' + esc(s.flagReason || "Something upstream changed.") + " Was signed off " + esc(fmtTime(x.so.at)) + ". Confirm it still holds, or reopen it.</div>";
   else if (x.status === "overridden") h += '<div class="gate override"><strong>Overridden</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ". Reason: " + esc(x.so.reason || "") + "</div>";
   else if (x.status === "done") h += '<div class="gate done"><strong>Signed off</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ".</div>";
   // owner/due
@@ -1058,8 +1077,8 @@ function renderSheet(s) {
   if (!x.done && x.status !== "review") {
     if (x.ownerDone) h += '<p style="margin:0">Marked complete by <strong>' + esc(who(s.ownerDoneBy)) + "</strong>, " + esc(fmtTime(s.ownerDoneAt)) + ".</p>" + (act ? '<button class="btn" data-act="undo-done">Undo mark complete</button>' : "");
     else {
-      var why = x.locked ? "Locked until the stages above are signed off." : !x.complete ? "Tick all " + x.total + " items first." : !x.rolesOk ? (x.rolesTotal ? x.rolesShort + " role" + (x.rolesShort > 1 ? "s have" : " has") + " fewer than " + s.rolesMin + " shortlisted options." : "Add every role and its shortlist first.") : !x.clientOk ? "Record the client approval first." : !act ? "Only " + ownerNames(s) + " (owner) or the approver can mark this complete." : "";
-      h += '<button class="btn btn-primary" data-act="mark-done" ' + (why ? "disabled" : "") + ">Mark complete</button>" + (why ? '<span class="hint">' + esc(why) + "</span>" : '<span class="hint">Sends it to the approver for sign-off.</span>');
+      var why = x.locked ? "Locked until the stages above are signed off." : !x.complete ? "Tick all " + x.total + " items first." : !x.rolesOk ? (x.rolesTotal ? x.rolesShort + " role" + (x.rolesShort > 1 ? "s have" : " has") + " fewer than " + s.rolesMin + " shortlisted options." : "Add every role and its shortlist first.") : !x.clientOk ? "Record the client approval first." : !act ? "Only " + ownerNames(s) + " (owner) or the team can mark this complete." : "";
+      h += '<button class="btn btn-primary" data-act="mark-done" ' + (why ? "disabled" : "") + ">Complete stage</button>" + (why ? '<span class="hint">' + esc(why) + "</span>" : '<span class="hint">Completes the stage and unlocks the next ones.</span>');
     }
   }
   if (S.isAdmin) {
@@ -1123,11 +1142,11 @@ function assetErr(e, f) {
   if (c === "unsupported_type") return whyNot(f);
   if (c === "quota_or_state") return "Storage for this page is full. Remove old files or use Drive links.";
   if (c === "rate_limited") return "Too many uploads at once. Wait a moment and try again.";
-  if (c === "not_granted") return "Uploading needs Editor access. Ask the approver.";
+  if (c === "not_granted") return "Uploading needs Editor access.";
   return "Couldn't upload " + f.name + ". Try again.";
 }
 function uploadFiles(s, list) {
-  if (!S.assets) return toast("Uploading needs Editor access. Ask the approver.");
+  if (!S.assets) return toast("Uploading needs Editor access.");
   var files = Array.prototype.slice.call(list || []);
   files.reduce(function (chain, f) {
     return chain.then(function () {
@@ -1221,7 +1240,10 @@ var A = {
   "mark-done": function () {
     var s = cur(), x = computeStates(S.stages, S.signoffs)[s.id];
     if (x.locked || !x.complete || !x.clientOk || !x.rolesOk || !canAct(s)) return;
-    upd(stagePath(s.pid, s.id), { ownerDoneAt: Date.now(), ownerDoneBy: S.me.id }).then(function () { approvers().forEach(function (mid) { notice(mid, { kind: "signoff", pid: s.pid, sid: s.id, text: label(s) + " is waiting for your sign-off" }, true); }); logIt(s.pid, "marked " + label(s) + " complete"); toast("Sent for sign-off."); });
+    var now = Date.now();
+    upd(stagePath(s.pid, s.id), { ownerDoneAt: now, ownerDoneBy: S.me.id })
+      .then(function () { return put("signoffs/" + s.pid + "__" + s.id, { pid: s.pid, sid: s.id, type: "approve", reason: "", by: S.me.id, at: now + 1 }); })
+      .then(function () { ownersOf(s).forEach(function (mid) { notice(mid, { kind: "signed", pid: s.pid, sid: s.id, text: label(s) + " was completed" }); }); logIt(s.pid, "completed " + label(s)); toast("Done. The next stages are unlocked."); });
   },
   "undo-done": function () { var s = cur(); upd(stagePath(s.pid, s.id), { ownerDoneAt: 0 }).then(function () { logIt(s.pid, "took back mark complete on " + label(s)); }); },
   signoff: function () {
@@ -1236,7 +1258,7 @@ var A = {
   override: function () {
     var s = cur(), r = val("ov-reason"); if (r.length < 8) return toast("Write a real reason. It's logged.");
     put("signoffs/" + s.pid + "__" + s.id, { pid: s.pid, sid: s.id, type: "override", reason: r, by: S.me.id, at: Date.now() })
-      .then(function () { ownersOf(s).forEach(function (mid) { notice(mid, { kind: "signed", pid: s.pid, sid: s.id, text: label(s) + " was overridden by the approver" }); }); S.ui.override = null; logIt(s.pid, "OVERRODE the gate on " + label(s) + ". Reason: " + r); });
+      .then(function () { ownersOf(s).forEach(function (mid) { notice(mid, { kind: "signed", pid: s.pid, sid: s.id, text: label(s) + " was overridden" }); }); S.ui.override = null; logIt(s.pid, "OVERRODE the gate on " + label(s) + ". Reason: " + r); });
   },
   reopen: function () {
     var s = cur(), r = val("ro-reason"); if (r.length < 5) return toast("Say what changed.");
@@ -1329,7 +1351,7 @@ document.addEventListener("click", function (e) {
   var el = e.target.closest("[data-act]"); if (!el || el.tagName === "SELECT" || (el.tagName === "INPUT")) return;
   var fn = A[el.getAttribute("data-act")]; if (!fn) return;
   if (el.tagName === "A") e.preventDefault();
-  if (!S.canWrite && ["open", "close", "tab", "filter", "goproj", "ui", "bell", "alert-open", "ack", "ack-open", "mark-read", "allow-pop", "mention-pick", "chat-open", "chat-close", "chat-full", "login-mode", "login-send", "login-reset", "sign-out", "chat-room", "proj-edit", "task-close", "task-go"].indexOf(el.getAttribute("data-act")) < 0) return toast("You have view access only.");
+  if (!S.canWrite && ["open", "close", "tab", "filter", "goproj", "ui", "bell", "alert-open", "ack", "ack-open", "mark-read", "allow-pop", "mention-pick", "chat-open", "chat-close", "chat-full", "login-send", "login-reset", "sign-out", "gm-signin", "install", "team-open", "chat-room", "proj-edit", "task-close", "task-go"].indexOf(el.getAttribute("data-act")) < 0) return toast("You have view access only.");
   fn(el.dataset);
 });
 document.addEventListener("change", function (e) {
@@ -1346,7 +1368,7 @@ document.addEventListener("keydown", function (e) { if (e.key === "Escape" && S.
 
 /* ---------- notifications, alarm, chat ---------- */
 S.alerts = []; S.notifOpen = false; S.mustAck = null; S.chat = {};
-var ALERT_TXT = { overdue: "Overdue", items: "Checklist items late", mention: "Tagged you", assigned: "Assigned to you", signoff: "Waiting for your sign-off", review: "Needs your review", soon: "Due soon", todo: "Still to fill in", signed: "Signed off" };
+var ALERT_TXT = { overdue: "Overdue", items: "Checklist items late", mention: "Tagged you", assigned: "Assigned to you", signoff: "Ready to complete", review: "Needs your review", soon: "Due soon", todo: "Still to fill in", signed: "Signed off" };
 var ALERT_CLR = { overdue: "var(--red)", items: "var(--red)", mention: "var(--blue)", assigned: "var(--blue)", signoff: "var(--blue)", review: "var(--amber)", soon: "var(--amber)", todo: "var(--faint)", signed: "var(--green)" };
 var ALERT_ORDER = ["overdue", "items", "mention", "assigned", "signoff", "review", "soon", "todo", "signed"];
 var URGENT = { overdue: 1, items: 1, mention: 1, assigned: 1, signoff: 1, review: 1, soon: 1 };
@@ -1374,7 +1396,7 @@ function alertWhy(a) {
   if (a.kind === "mention") return "\u201C" + a.snippet + "\u201D. Send an update to clear this.";
   if (a.kind === "reply") return "\u201C" + a.snippet + "\u201D";
   if (a.kind === "assigned") return "By " + (a.byName || "a teammate");
-  if (a.kind === "signed") return "By the approver";
+  if (a.kind === "signed") return "Completed";
   return "";
 }
 var alertT;
@@ -1536,8 +1558,8 @@ function notice(mid, o, emailOnly) {
   var me = myMember(); if (!mid || (me && me.id === mid)) return;
   var id = "n" + uid(), n = Object.assign({ mid: mid, by: S.me.id, byName: me ? me.name : "", byMid: me ? me.id : "", at: Date.now(), readAt: 0 }, o), m = S.team[mid] || {}, link = noticeLink(n);
   if (!emailOnly) put("notices/" + id, n).catch(function () {});
-  put("outbox/" + id, { to: m.email || "", toName: m.name || "", mid: mid, kind: n.kind, subject: "a-tom. " + emailSubject(n),
-    text: (n.snippet ? "\u201C" + n.snippet + "\u201D\n\n" : n.text ? n.text + "\n\n" : "") + "Open it: " + link, link: link, status: m.email ? "queued" : "no_email", at: n.at }).catch(function () {});
+  queueMail(id, { to: m.email || "", toName: m.name || "", mid: mid, kind: n.kind, subject: "a-tom. " + emailSubject(n),
+    text: (n.snippet ? "\u201C" + n.snippet + "\u201D\n\n" : n.text ? n.text + "\n\n" : "") + "Open it: " + link, link: link, status: m.email ? "queued" : "no_email", at: n.at });
 }
 function findMentions(t) {
   if (/(^|\s)@team\b/i.test(t)) return members().map(function (x) { return x.id; });
@@ -1715,7 +1737,7 @@ function deleteProject(pid) {
     .catch(function (e) { toast(errMsg(e)); });
 }
 A["proj-edit"] = function (d) { go({ v: "project", pid: d.pid, tab: "settings" }); };
-A["proj-del"] = function (d) { if (!S.isAdmin) return toast("Only the approver can delete a production."); deleteProject(d.pid); };
+A["proj-del"] = function (d) { deleteProject(d.pid); };
 A["tm-edit"] = function (d) { S.ui.editMember = d.mid; render(); };
 A["tm-cancel"] = function () { S.ui.editMember = null; render(); };
 A["tm-save"] = function (d) {
@@ -1863,25 +1885,92 @@ document.addEventListener("keydown", function (e) { var k = e.target.getAttribut
 
 /* ---------- installable app (PWA) ---------- */
 if ("serviceWorker" in navigator && location.protocol !== "file:") window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
-(function () {
-  var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  if (standalone || localStorage.getItem("pp_install_hide")) return;
-  var deferred = null, ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-  function show(msg, act) {
-    if (document.getElementById("pp-install")) return;
-    var d = document.createElement("div"); d.id = "pp-install"; d.className = "install";
-    d.innerHTML = '<span>' + msg + '</span>' + (act ? '<button class="btn btn-primary" data-i="go">Install</button>' : "") + '<button class="btn btn-quiet" data-i="x" aria-label="Dismiss">Not now</button>';
-    d.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-i]"); if (!b) return;
-      if (b.getAttribute("data-i") === "go" && deferred) { deferred.prompt(); deferred.userChoice.then(function () { deferred = null; d.remove(); }); }
-      else { localStorage.setItem("pp_install_hide", "1"); d.remove(); }
-    });
-    document.body.appendChild(d);
+
+/* ---------- header toolbar: Gmail, install, team, posting as ---------- */
+var GM = { token: "", exp: 0, email: localStorage.getItem("pp_gm_email") || "", client: null };
+try { var gt = JSON.parse(sessionStorage.getItem("pp_gm_tok") || "{}"); if (gt.exp > Date.now()) { GM.token = gt.token; GM.exp = gt.exp; } } catch (e) {}
+function gmOn() { return GM.token && GM.exp > Date.now() + 30000; }
+function gmClient() {
+  var cid = (window.PIPELINE_CONFIG || {}).googleClientId;
+  if (!cid || !window.google || !google.accounts || !google.accounts.oauth2) return null;
+  return GM.client || (GM.client = google.accounts.oauth2.initTokenClient({
+    client_id: cid, scope: "https://www.googleapis.com/auth/gmail.send openid email profile",
+    callback: function (r) {
+      if (!r || !r.access_token) return toast("Gmail sign-in was cancelled.");
+      GM.token = r.access_token; GM.exp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
+      sessionStorage.setItem("pp_gm_tok", JSON.stringify({ token: GM.token, exp: GM.exp }));
+      fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: "Bearer " + GM.token } }).then(function (x) { return x.json(); }).then(function (u) {
+        GM.email = u.email || ""; localStorage.setItem("pp_gm_email", GM.email);
+        var m = myMember(); if (m && !m.email && GM.email) upd("team/" + m.id, { email: GM.email });
+        toast("Signed in as " + GM.email + ". Emails you trigger go from your Gmail."); render(); flushMine();
+      }).catch(function () { render(); });
+    }
+  }));
+}
+A["gm-signin"] = function () {
+  if (gmOn()) { if (confirm("Disconnect Gmail (" + GM.email + ")? Emails will be queued instead.")) { if (window.google) google.accounts.oauth2.revoke(GM.token, function () {}); GM.token = ""; GM.exp = 0; sessionStorage.removeItem("pp_gm_tok"); render(); } return; }
+  var c = gmClient();
+  if (!c) return toast((window.PIPELINE_CONFIG || {}).googleClientId ? "Google is still loading. Try again in a second." : "Gmail sign-in needs a Google client ID. Add googleClientId at the top of index.html (see NEON-SETUP.md).");
+  c.requestAccessToken({ prompt: GM.email ? "" : "consent", login_hint: GM.email || undefined });
+};
+function b64url(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function gmSend(mail) {
+  var me = myMember(), from = (me ? me.name : "a-tom. Pipeline") + " <" + GM.email + ">";
+  var raw = ["From: " + from, "To: " + (mail.toName ? '"' + mail.toName.replace(/"/g, "") + '" ' : "") + "<" + mail.to + ">", "Subject: =?UTF-8?B?" + btoa(unescape(encodeURIComponent(mail.subject))) + "?=", "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "", mail.text].join("\r\n");
+  return fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: "Bearer " + GM.token, "Content-Type": "application/json" }, body: JSON.stringify({ raw: b64url(raw) }) })
+    .then(function (r) { if (!r.ok) throw new Error("gmail " + r.status); });
+}
+var myQueue = [];
+function flushMine() {
+  if (!gmOn()) return;
+  var q = myQueue; myQueue = [];
+  q.forEach(function (x) { gmSend(x.mail).then(function () { upd("outbox/" + x.id, { status: "sent", via: "gmail", from: GM.email, sentAt: Date.now() }).catch(function () {}); }, function () { myQueue.push(x); }); });
+}
+function queueMail(id, mail) {
+  put("outbox/" + id, mail).then(function () { if (mail.status === "queued") { myQueue.push({ id: id, mail: mail }); flushMine(); } }).catch(function () {});
+}
+
+var instEvt = null;
+window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); instEvt = e; render(); });
+window.addEventListener("appinstalled", function () { instEvt = null; render(); toast("Installed. Open it from your home screen."); });
+function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone; }
+A["install"] = function () {
+  if (instEvt) { instEvt.prompt(); instEvt.userChoice.then(function () { instEvt = null; render(); }); return; }
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return toast("On iPhone: tap Share, then Add to Home Screen.");
+  toast("Use your browser menu: Install app / Add to Home screen.");
+};
+A["team-open"] = function () {
+  if (S.route.v === "project") return go({ v: "project", pid: S.route.pid, tab: "team" });
+  var ps = Object.keys(S.projects).filter(function (k) { return !S.projects[k].archived; });
+  if (!ps.length) return toast("Create a production first. The team is shared across all of them.");
+  go({ v: "project", pid: ps[0], tab: "team" });
+};
+
+document.addEventListener("change", function (e) {
+  if (!e.target.hasAttribute || !e.target.hasAttribute("data-posting")) return;
+  var v = e.target.value, cur = myMember();
+  if (v === "__new") {
+    var n = (prompt("Your name") || "").trim(); if (!n) return render();
+    var id = slug(n) + "-" + uid().slice(-4);
+    (cur ? upd("team/" + cur.id, { userId: null }) : Promise.resolve()).then(function () { return put("team/" + id, { id: id, name: n, role: "", email: GM.email || "", userId: S.me.id, order: members().length }); }).then(function () { toast("Posting as " + n + "."); });
+    return;
   }
-  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; show("Install the pipeline on this device for one-tap access.", true); });
-  if (ios) setTimeout(function () { show('Install on iPhone: tap <b>Share</b>, then <b>Add to Home Screen</b>.', false); }, 2500);
-  window.addEventListener("appinstalled", function () { var d = document.getElementById("pp-install"); if (d) d.remove(); });
-})();
+  if (!v) { if (cur) upd("team/" + cur.id, { userId: null }); return; }
+  (cur && cur.id !== v ? upd("team/" + cur.id, { userId: null }) : Promise.resolve()).then(function () { return upd("team/" + v, { userId: S.me.id }); }).then(function () { toast("Posting as " + memberName(v) + "."); });
+});
+function renderToolbar() {
+  if (!S.ready) return "";
+  var cfg = window.PIPELINE_CONFIG || {}, me = myMember(), h = "";
+  h += '<button class="btn tb-blue" data-act="gm-signin" title="Emails you trigger will be sent from your own Gmail">' + (gmOn() ? "Gmail · " + esc(GM.email.split("@")[0]) : "Sign in with Gmail") + "</button>";
+  if (!isStandalone()) h += '<button class="btn tb-dark" data-act="install" title="Add to your home screen">&darr; Install app</button>';
+  h += '<button class="btn" data-act="team-open">Team</button>';
+  h += renderBell();
+  if (S.canWrite) h += '<label class="tb-as"><span>Posting as</span><select data-posting aria-label="Posting as"><option value="">Choose…</option>' +
+    members().map(function (m) { var taken = m.userId && m.userId !== S.me.id; return '<option value="' + esc(m.id) + '"' + (me && me.id === m.id ? " selected" : "") + (taken ? " disabled" : "") + ">" + esc(m.name) + (taken ? " (in use)" : "") + "</option>"; }).join("") +
+    '<option value="__new">+ Add my name</option></select></label>';
+  if (S.canWrite && S.route.v !== "new") h += '<button class="btn btn-primary tb-new" data-act="new">+ New production</button>';
+  return h;
+}
 
 /* ---------- boot ---------- */
 render();
@@ -1903,7 +1992,7 @@ function backend() {
     if (!sess) { var q = new URLSearchParams(location.search); S.login = { expired: q.get("login") === "expired" }; if (q.has("login")) history.replaceState(null, "", location.pathname + location.hash); return render(); }
     var ident = S.user ? Promise.all([S.user.me(), S.user.can("data.write")]) : Promise.resolve([{ id: null, name: "", avatarUrl: "", canEdit: false }, null]);
     return ident.then(function (w) {
-      S.me = w[0]; S.isAdmin = !!w[0].isOwner; S.canWrite = w[1] !== false;
+      S.me = w[0]; S.isAdmin = true; S.canWrite = w[1] !== false;
       B.use("assets").then(function (a) { S.assets = a; render(); });
       ensureChat("all"); var got = { t: false, p: false };
       function ready() { if (got.t && got.p && !S.ready) { S.ready = true; onRoute(); seedRestore(); } else render(); if (S.ready) alertsSoon(); }
