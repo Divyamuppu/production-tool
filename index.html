@@ -152,15 +152,27 @@ textarea.inp{min-height:70px;resize:vertical}
 
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(8,19,37,.45);z-index:40}
-.sheet{position:fixed;z-index:41;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);animation:slide .2s ease-out}
+.sheet{position:fixed;z-index:41;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet.enter{animation:slide .2s ease-out}
 @keyframes slide{from{transform:translateX(24px);opacity:.4}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+@media (prefers-reduced-motion:reduce){.sheet.enter{animation:none}}
+.sec-head{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.sec-head h4{margin:0}
+.sec-save{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2)}
+.savebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
+.savebar .hint{flex:1;min-width:160px}
+.savebar.dirty{background:var(--amber-soft)}
+.savebar.dirty .hint{color:var(--ink)}
+.c-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.c-acts{margin-left:auto;display:flex;gap:14px}
+.c-acts .btn{font-size:13px;padding:0;min-height:0}
+.comment.editing textarea{margin-top:6px}
 .sheet-top{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
 .sheet-top h2{font-family:var(--serif);font-weight:500;font-size:26px;line-height:1.15;letter-spacing:-.01em}
 .sheet-close{margin-left:auto;border:1px solid var(--line);background:var(--surface);border-radius:8px;width:36px;height:36px;font-size:18px;line-height:1;flex:none}
 .sheet-body{overflow-y:auto;padding:4px 18px 40px;flex:1}
 .sec{padding:16px 0;border-bottom:1px solid var(--line-2)}
-.sec:last-child{border-bottom:0}
+.sheet-body>[data-part]:last-child>.sec{border-bottom:0}
 .sec h4{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--ink)}
 .desc{color:var(--muted);font-size:14px;margin:0}
 .gate{border-radius:10px;padding:12px 14px;font-size:14px;margin-top:14px}
@@ -384,6 +396,9 @@ input.invalid,textarea.invalid,.inp.invalid{border-color:var(--red)!important;ba
   .c-icon{width:42px;height:42px}
   .msg-acts{opacity:1}
   .msg-acts button{padding:6px 2px;font-size:12px}
+  .c-acts .btn{min-height:36px}
+  .savebar{padding:10px 14px}
+  .savebar .row{width:100%;justify-content:flex-end}
 }
 @media (max-width:720px){
   .sheet{width:100%}
@@ -704,7 +719,7 @@ function resolveNames() {
     var changed = false;
     ids.forEach(function (i) { var n = (ps[i] && ps[i].name) || ""; if (S.names[i] !== n) { S.names[i] = n; changed = true; } });
     resolving = false;
-    if (changed) render();
+    if (changed) renderSoon();
   }).catch(function () { resolving = false; });
 }
 function ownersOf(s) { return s && s.owners && s.owners.length ? s.owners : (s && s.owner ? [s.owner] : []); }
@@ -793,13 +808,13 @@ function openProject(pid) {
   closeProject();
   curPid = pid; S.stages = {}; S.signoffs = {}; S.log = []; S.ui = {}; ensureChat(pid);
   subs.proj.push(S.db.collection("projects/" + pid + "/stages").onSnapshot(function (snap) {
-    var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); S.stages = o; S.stagesLoaded = true; render(); alertsSoon();
+    var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); S.stages = o; S.stagesLoaded = true; renderSoon(); alertsSoon();
   }, function (e) { toast(errMsg(e)); }));
   subs.proj.push(S.db.collection("signoffs").where("pid", "==", pid).onSnapshot(function (snap) {
-    var o = {}; snap.docs.forEach(function (d) { var x = d.data(); o[x.sid] = x; }); S.signoffs = o; render(); alertsSoon();
+    var o = {}; snap.docs.forEach(function (d) { var x = d.data(); o[x.sid] = x; }); S.signoffs = o; renderSoon(); alertsSoon();
   }, function (e) { toast(errMsg(e)); }));
   subs.proj.push(S.db.collection("projects/" + pid + "/log").orderBy("day", "desc").limit(14).onSnapshot(function (snap) {
-    S.log = snap.docs.map(function (d) { return d.data(); }); render();
+    S.log = snap.docs.map(function (d) { return d.data(); }); renderSoon();
   }, function () {}));
 }
 function closeProject() { subs.proj.forEach(function (u) { try { u(); } catch (e) {} }); subs.proj = []; curPid = null; S.stagesLoaded = false; }
@@ -816,7 +831,7 @@ function loadHomeStats() {
         late: ids.filter(function (i) { return cs[i].overdue; }).length,
         waiting: ids.filter(function (i) { return cs[i].status === "awaiting" || cs[i].status === "review"; }).length
       };
-      render();
+      renderSoon();
     }).catch(function () {});
   });
 }
@@ -830,29 +845,53 @@ function captureInputs() {
   var sb = document.querySelector(".sheet-body");
   return { keep: keep, focus: focus, sheetScroll: sb ? sb.scrollTop : 0 };
 }
-function restoreInputs(c) {
-  document.querySelectorAll("[data-keep]").forEach(function (el) { var k = el.getAttribute("data-keep"); if (c.keep[k] !== undefined) el.value = c.keep[k]; });
-  if (c.focus) { var el = document.querySelector('[data-keep="' + c.focus.k + '"]'); if (el) { el.focus(); try { el.setSelectionRange(c.focus.s, c.focus.e); } catch (e) {} } }
-  var sb = document.querySelector(".sheet-body"); if (sb) sb.scrollTop = c.sheetScroll;
+/* Only the parts of the page whose markup actually changed are replaced, so typing, scrolling,
+   images and the open sheet stay put while data refreshes in the background. */
+function restoreInputs(c, roots) {
+  roots.forEach(function (root) {
+    var els = root.querySelectorAll("[data-keep]");
+    Array.prototype.forEach.call(els, function (el) { var k = el.getAttribute("data-keep"); if (c.keep[k] !== undefined && el.value !== c.keep[k]) el.value = c.keep[k]; });
+  });
+  if (c.focus) { var el = document.querySelector('[data-keep="' + c.focus.k + '"]'); if (el && document.activeElement !== el) { try { el.focus({ preventScroll: true }); el.setSelectionRange(c.focus.s, c.focus.e); } catch (e) {} } }
+}
+var lastHTML = {}, lastSheet = { sid: null, sig: "", parts: {} }, rafT = 0;
+function setHTML(el, html, out) { if (lastHTML[el.id] === html) return; el.innerHTML = html; lastHTML[el.id] = html; out.push(el); }
+function renderSoon() { if (!rafT) rafT = requestAnimationFrame(function () { rafT = 0; render(); }); }
+function paintSheet(root, s, c, out) {
+  if (!s) { if (lastSheet.sid !== null || root.firstChild) { root.innerHTML = ""; lastSheet = { sid: null, sig: "", parts: {} }; } return; }
+  var parts = sheetParts(s), sig = s.id + "|" + parts.map(function (p) { return p[0]; }).join(","), aside = root.querySelector("aside.sheet");
+  if (!aside || lastSheet.sig !== sig) {
+    var isNew = lastSheet.sid !== s.id, top = "", body = "", bar = "";
+    parts.forEach(function (p) { var w = '<div data-part="' + p[0] + '">' + p[1] + "</div>"; if (p[0] === "top") top = w; else if (p[0] === "bar") bar = w; else body += w; });
+    root.innerHTML = '<div class="scrim" data-act="close"></div><aside class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(label(s)) + '">' + top + '<div class="sheet-body">' + body + "</div>" + bar + "</aside>";
+    lastSheet = { sid: s.id, sig: sig, parts: {} }; parts.forEach(function (p) { lastSheet.parts[p[0]] = p[1]; });
+    if (isNew) root.querySelector("aside.sheet").classList.add("enter");
+    var sb = root.querySelector(".sheet-body"); if (sb) sb.scrollTop = isNew ? 0 : c.sheetScroll;
+    out.push(root); return;
+  }
+  parts.forEach(function (p) {
+    if (lastSheet.parts[p[0]] === p[1]) return;
+    var el = aside.querySelector('[data-part="' + p[0] + '"]'); if (!el) return;
+    el.innerHTML = p[1]; lastSheet.parts[p[0]] = p[1]; out.push(el);
+  });
 }
 function render() {
-  var c = captureInputs(), cc = captureChat();
-  document.getElementById("tb").innerHTML = renderToolbar();
+  if (rafT) { cancelAnimationFrame(rafT); rafT = 0; }
+  var c = captureInputs(), cc = captureChat(), out = [];
+  setHTML(document.getElementById("tb"), renderToolbar(), out);
   document.body.classList.toggle("home", S.route.v === "home");
-  document.getElementById("chat-root").innerHTML = renderChatDrawer() + renderLauncher();
-  document.getElementById("notif-root").innerHTML = S.ready ? (S.mustAck && !S.task ? renderAck() : "") + (S.notifOpen ? renderNotif() : "") + renderTask() : "";
-  document.title = (S.alerts.length ? "(" + S.alerts.length + ") " : "") + "a-tom. Production Pipeline";
+  setHTML(document.getElementById("chat-root"), renderChatDrawer() + renderLauncher(), out);
+  setHTML(document.getElementById("notif-root"), S.ready ? (S.mustAck && !S.task ? renderAck() : "") + (S.notifOpen ? renderNotif() : "") + renderTask() : "", out);
+  var title = (S.alerts.length ? "(" + S.alerts.length + ") " : "") + "a-tom. Production Pipeline"; if (document.title !== title) document.title = title;
   var app = document.getElementById("app"), sheet = document.getElementById("sheet-root");
-  if (S.login) { app.innerHTML = renderLogin(); sheet.innerHTML = ""; setTimeout(function () { var i = document.querySelector('[data-keep="login-email"]'); if (i && !i.value) i.focus(); }, 30); return; }
-  if (S.fatal) { app.innerHTML = '<div class="wrap"><div class="banner warn">' + esc(S.fatal) + "</div></div>"; sheet.innerHTML = ""; return; }
-  if (!S.ready) { app.innerHTML = '<div class="wrap loading">Loading productions…</div>'; return; }
+  if (S.login) { setHTML(app, renderLogin(), out); paintSheet(sheet, null, c, out); restoreInputs(c, out); setTimeout(function () { var i = document.querySelector('[data-keep="login-email"]'); if (i && !i.value) i.focus(); }, 30); return; }
+  if (S.fatal) { setHTML(app, '<div class="wrap"><div class="banner warn">' + esc(S.fatal) + "</div></div>", out); paintSheet(sheet, null, c, out); return; }
+  if (!S.ready) { setHTML(app, '<div class="wrap loading">Loading productions…</div>', out); return; }
   var r = S.route;
-  if (r.v === "home") app.innerHTML = renderHome();
-  else if (r.v === "new") app.innerHTML = renderNew();
-  else app.innerHTML = renderProject();
-  sheet.innerHTML = r.v === "project" && r.stage && S.stages[r.stage] ? renderSheet(S.stages[r.stage]) : "";
-  document.body.style.overflow = sheet.innerHTML || (S.chatOpen && S.chatFull) ? "hidden" : "";
-  restoreInputs(c); restoreChat(cc);
+  setHTML(app, r.v === "home" ? renderHome() : r.v === "new" ? renderNew() : renderProject(), out);
+  paintSheet(sheet, r.v === "project" && r.stage && S.stages[r.stage] ? S.stages[r.stage] : null, c, out);
+  var ov = lastSheet.sid || (S.chatOpen && S.chatFull) ? "hidden" : ""; if (document.body.style.overflow !== ov) document.body.style.overflow = ov;
+  restoreInputs(c, out); restoreChat(cc);
   resolveNames();
 }
 function renderMe() {
@@ -1040,77 +1079,237 @@ function renderSettings(p) {
 }
 
 /* sheet */
-function renderSheet(s) {
-  var st = computeStates(S.stages, S.signoffs), x = st[s.id], ui = S.ui, act = canAct(s), editable = act && !x.done && !x.locked;
-  var h = '<div class="scrim" data-act="close"></div><aside class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(label(s)) + '">' +
-    '<div class="sheet-top"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="mono muted">' + esc(PHASES[s.phase]) + '</span><span class="tag">' + esc(delivName(s.pid, s.deliv)) + '</span><span class="pill p-' + x.status + '">' + esc(STATUS_TXT[x.status]) + "</span>" + (x.overdue ? '<span class="pill" style="background:var(--red-soft);color:var(--red)">Overdue</span>' : "") + "</div><h2>" + esc(s.name) + '</h2></div><button class="sheet-close" data-act="close" aria-label="Close">&times;</button></div><div class="sheet-body">';
-  h += '<p class="desc" style="margin-top:14px">' + esc(s.desc || "") + "</p>";
-  // gate
-  if (x.locked) h += '<div class="gate locked"><strong>Locked.</strong> Opens when these are signed off:<ul>' + x.blockers.map(function (b) { var bs = S.stages[b]; return '<li><button data-act="open" data-sid="' + esc(b) + '">' + esc(label(bs)) + ": " + esc(STATUS_TXT[st[b].status]).toLowerCase() + ", " + esc(ownerNames(bs)) + "</button></li>"; }).join("") + '</ul><p class="hint" style="margin:8px 0 0">You can still park files, links and notes here.</p></div>';
-  else if (x.status === "review") h += '<div class="gate review"><strong>Needs review.</strong> ' + esc(s.flagReason || "Something upstream changed.") + " Was signed off " + esc(fmtTime(x.so.at)) + ". Confirm it still holds, or reopen it.</div>";
-  else if (x.status === "overridden") h += '<div class="gate override"><strong>Overridden</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ". Reason: " + esc(x.so.reason || "") + "</div>";
-  else if (x.status === "done") h += '<div class="gate done"><strong>Signed off</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ".</div>";
-  // owner/due
+/* ---------- unsaved changes, per section ----------
+   Edits in the sheet are held as a draft per section until Save (or Save all) writes them in one request. */
+var SECS = { owners: "Owners and deadline", checklist: "Checklist", roles: "Roles and shortlists", client: "Client approval", files: "Files and links", notes: "Notes" };
+var SEC_ORDER = ["owners", "checklist", "roles", "client", "files", "notes"];
+S.pend = {}; S.inflight = {};
+function isObj(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+function clone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+function accum(a, b) { // merge a patch into a draft patch, keeping nulls (they delete on save)
+  Object.keys(b).forEach(function (k) { var v = b[k]; a[k] = isObj(v) ? accum(isObj(a[k]) ? a[k] : {}, v) : clone(v); });
+  return a;
+}
+function applyPatch(o, p) { // apply a patch to a doc the way the database does
+  Object.keys(p).forEach(function (k) { var v = p[k]; if (v === null) delete o[k]; else if (isObj(v)) o[k] = applyPatch(isObj(o[k]) ? o[k] : {}, v); else o[k] = clone(v); });
+  return o;
+}
+function pendOf(sid) { return S.pend[sid] || {}; }
+function pendSecs(sid) { var P = pendOf(sid); return SEC_ORDER.filter(function (k) { return P[k]; }); }
+function viewStage(s) {
+  if (!s) return s;
+  var fl = S.inflight[s.id], ps = pendSecs(s.id); if (!fl && !ps.length) return s;
+  var v = clone(s); if (fl) applyPatch(v, fl.patch);
+  ps.forEach(function (k) { applyPatch(v, S.pend[s.id][k].patch); });
+  return v;
+}
+function viewStages() { var sid = S.route.stage; if (!sid || !S.stages[sid]) return S.stages; var o = Object.assign({}, S.stages); o[sid] = viewStage(S.stages[sid]); return o; }
+function stageEdit(sec, patch, log) {
+  var s = S.stages[S.route.stage]; if (!s) return false;
+  var P = S.pend[s.id] = S.pend[s.id] || {}, e = P[sec] = P[sec] || { patch: {}, logs: [] };
+  accum(e.patch, patch); if (log) e.logs.push(log);
+  render(); return true;
+}
+function discardSecs(sid, secs) { var P = S.pend[sid]; if (!P) return; secs.forEach(function (k) { delete P[k]; }); if (!Object.keys(P).length) delete S.pend[sid]; if (secs.indexOf("notes") >= 0) S.ui.editNote = null; }
+function logMany(pid, texts) {
+  if (!texts.length) return;
+  var day = today(), path = "projects/" + pid + "/log/" + day, patch = { entries: {} }, now = Date.now();
+  texts.forEach(function (t, i) { patch.entries["e" + uid() + i] = { at: now + i, by: S.me.id, text: t }; });
+  q(path, function () {
+    return S.db.doc(path).update(patch).catch(function (e) { if (e && e.code === "invalid_argument") return S.db.doc(path).set({ day: day, entries: patch.entries }); throw e; });
+  }).catch(function () {});
+}
+function saveEffects(before, patch) { // notifications and cleanup that belong to what was saved
+  var sid = before.id, pid = before.pid, nm = label(before);
+  if (patch.owners) patch.owners.filter(function (m) { return ownersOf(before).indexOf(m) < 0; }).forEach(function (mid) { notice(mid, { kind: "assigned", pid: pid, sid: sid, text: "You were made an owner of " + nm }); });
+  var bc = before.comments || {}, pc = patch.comments || {};
+  Object.keys(pc).forEach(function (k) { if (pc[k] && pc[k].text && !bc[k]) notifyMentions(pc[k].text, { pid: pid, sid: sid, where: "notes on " + nm }); });
+  var bf = before.files || {}, pf = patch.files || {};
+  Object.keys(pf).forEach(function (k) { if (pf[k] === null && bf[k] && bf[k].asset && S.assets) S.assets.delete(bf[k].asset).catch(function () {}); });
+}
+function commit(sid, secs) {
+  var base = S.stages[sid], P = S.pend[sid]; if (!base || !P || S.inflight[sid]) return;
+  var patch = {}, logs = [], taken = {};
+  secs.forEach(function (k) { if (!P[k]) return; taken[k] = P[k]; accum(patch, P[k].patch); logs = logs.concat(P[k].logs); delete P[k]; });
+  if (!Object.keys(P).length) delete S.pend[sid];
+  var before = clone(base), names = Object.keys(taken);
+  if (names.indexOf("notes") >= 0) S.ui.editNote = null;
+  S.inflight[sid] = { patch: patch, secs: names }; render();
+  upd(stagePath(base.pid, sid), patch).then(function () {
+    delete S.inflight[sid];
+    if (S.stages[sid]) S.stages[sid] = applyPatch(clone(S.stages[sid]), patch);
+    saveEffects(before, patch); logMany(before.pid, logs);
+    toast(names.length > 1 ? "All changes saved." : SECS[names[0]] + " saved.");
+    render();
+  }, function () {
+    delete S.inflight[sid]; // put the draft back so nothing typed is lost
+    var P2 = S.pend[sid] = S.pend[sid] || {};
+    names.forEach(function (k) { if (P2[k]) { accum(taken[k].patch, P2[k].patch); taken[k].logs = taken[k].logs.concat(P2[k].logs); } P2[k] = taken[k]; });
+    render();
+  });
+}
+// Text typed into a section's boxes but not yet added counts as part of that section's save.
+var FLUSH = {
+  checklist: function () { if (val("add-item")) return A["add-item"](); },
+  roles: function () {
+    var ok = true;
+    if (val("role-new")) ok = A["add-role"]() !== false && ok;
+    document.querySelectorAll('#sheet-root [data-keep^="op-"]').forEach(function (el) { var k = el.getAttribute("data-keep"); if (/-n$/.test(k) && el.value.trim()) ok = A["add-opt"]({ r: k.slice(3, -2) }) !== false && ok; });
+    return ok;
+  },
+  client: function () { if (val("cl-who")) return A["client-save"](); },
+  files: function () { if (val("lk-url") || val("lk-label")) return A["add-link"](); },
+  notes: function () {
+    if (S.ui.editNote && A["note-done"]({ k: S.ui.editNote }) === false) return false;
+    if (val("cm-text")) return A.comment();
+  }
+};
+function saveSecs(secs) {
+  var sid = S.route.stage; if (!sid || !S.stages[sid]) return;
+  if (S.inflight[sid]) return toast("Still saving. One moment.");
+  for (var i = 0; i < secs.length; i++) { var f = FLUSH[secs[i]]; if (f && f() === false) return; }
+  var P = pendOf(sid), has = secs.filter(function (k) { return P[k]; });
+  if (!has.length) return toast(secs.length > 1 ? "Nothing to save. Everything here is up to date." : "No changes to save in " + SECS[secs[0]] + ".");
+  commit(sid, has);
+}
+function leaveSheetOk() {
+  var sid = S.route.stage, ps = sid ? pendSecs(sid) : [];
+  if (!ps.length) return true;
+  if (!confirm("You have unsaved changes in " + ps.map(function (k) { return SECS[k]; }).join(", ") + ".\n\nClose without saving? Those changes will be discarded.")) return false;
+  discardSecs(sid, ps); return true;
+}
+window.addEventListener("beforeunload", function (e) { if (Object.keys(S.pend).some(function (k) { return pendSecs(k).length; }) || Object.keys(S.inflight).length) { e.preventDefault(); e.returnValue = ""; } });
+
+function secHead(sid, k, title) {
+  var P = pendOf(sid), fl = S.inflight[sid], saving = fl && fl.secs.indexOf(k) >= 0;
+  return '<div class="sec-head"><h4>' + title + "</h4>" + (saving ? '<span class="pill p-progress">Saving…</span>' : P[k] ? '<span class="pill p-review">Unsaved changes</span>' : "") + "</div>";
+}
+function secFoot(sid, k, show) {
+  var P = pendOf(sid); if (!show && !P[k]) return "";
+  var fl = S.inflight[sid], saving = fl && fl.secs.indexOf(k) >= 0, busy = !!fl;
+  return '<div class="sec-save">' + (P[k] && !saving ? '<button class="btn btn-quiet" data-act="sec-discard" data-sec="' + k + '">Discard</button>' : "") +
+    '<button class="btn' + (P[k] ? " btn-primary" : "") + '" data-act="sec-save" data-sec="' + k + '"' + (busy ? " disabled" : "") + ">" + (saving ? "Saving…" : "Save " + SECS[k].toLowerCase()) + "</button></div>";
+}
+A["sec-save"] = function (d) { saveSecs([d.sec]); };
+A["sec-discard"] = function (d) { discardSecs(S.route.stage, [d.sec]); render(); };
+A["save-all"] = function () { saveSecs(SEC_ORDER); };
+A["discard-all"] = function () { var sid = S.route.stage, ps = pendSecs(sid); if (!ps.length) return; if (!confirm("Discard unsaved changes in " + ps.map(function (k) { return SECS[k]; }).join(", ") + "?")) return; discardSecs(sid, ps); render(); };
+
+/* notes: edit and delete */
+function canEditNote(c) { return S.canWrite && (S.isAdmin || c.by === S.me.id); }
+A["note-edit"] = function (d) {
+  S.ui.editNote = d.k; render();
+  setTimeout(function () { var t = document.querySelector('[data-keep="cm-edit-' + d.k + '"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 30);
+};
+A["note-cancel"] = function () { S.ui.editNote = null; render(); };
+A["note-done"] = function (d) {
+  var s = cur(), c = ((s && s.comments) || {})[d.k]; if (!c) { S.ui.editNote = null; render(); return; }
+  var t = val("cm-edit-" + d.k);
+  if (!t) { toast("A note can't be empty. Use Delete to remove it."); return false; }
+  S.ui.editNote = null;
+  if (t === c.text) { render(); return true; }
+  var patch = { comments: {} }; patch.comments[d.k] = { text: t, editedAt: Date.now(), editedBy: S.me.id };
+  return stageEdit("notes", patch, "edited a note on " + label(s));
+};
+A["note-del"] = function (d) {
+  var s = cur(), c = ((s && s.comments) || {})[d.k]; if (!c) return;
+  if (S.ui.editNote === d.k) S.ui.editNote = null;
+  var patch = { comments: {} }; patch.comments[d.k] = null;
+  stageEdit("notes", patch, "deleted a note on " + label(s));
+};
+
+function renderNotes(s) {
+  var sid = s.id, cm = s.comments || {}, P = pendOf(sid), pc = (P.notes && P.notes.patch.comments) || {};
+  var cs = Object.keys(cm).filter(function (k) { return cm[k]; }).map(function (k) { return Object.assign({ k: k }, cm[k]); }).sort(function (a, b) { return a.at - b.at; });
+  var h = '<div class="sec">' + secHead(sid, "notes", "Notes");
+  if (!cs.length) h += '<p class="hint" style="margin:0">No notes yet.</p>';
+  h += cs.map(function (c) {
+    if (S.ui.editNote === c.k && canEditNote(c)) return '<div class="comment editing"><span class="c-by">Editing note by <strong>' + esc(who(c.by)) + "</strong>, " + esc(fmtTime(c.at)) + "</span>" +
+      '<textarea class="inp" rows="3" data-keep="cm-edit-' + esc(c.k) + '">' + esc(c.text) + "</textarea>" +
+      '<div class="row" style="margin-top:8px"><button class="btn" data-act="note-done" data-k="' + esc(c.k) + '">Done</button><button class="btn btn-quiet" data-act="note-cancel">Cancel</button></div></div>';
+    return '<div class="comment"><div class="c-head"><span class="c-by"><strong>' + esc(who(c.by)) + "</strong>, " + esc(fmtTime(c.at)) + (c.editedAt ? ", edited" : "") + "</span>" +
+      (pc[c.k] !== undefined ? '<span class="pill p-review">Unsaved</span>' : "") +
+      (canEditNote(c) ? '<span class="c-acts"><button class="btn btn-quiet" data-act="note-edit" data-k="' + esc(c.k) + '">Edit</button><button class="btn btn-quiet btn-danger" data-act="note-del" data-k="' + esc(c.k) + '">Delete</button></span>' : "") +
+      "</div><p>" + esc(c.text) + "</p></div>";
+  }).join("");
+  if (S.canWrite) h += '<textarea class="inp" style="margin-top:8px" placeholder="Decisions, open questions, what the DOP said" data-keep="cm-text"></textarea><div class="row" style="margin-top:8px"><button class="btn" data-act="comment">Add note</button></div>';
+  return h + secFoot(sid, "notes", S.canWrite) + "</div>";
+}
+
+/* the sheet, as named parts so a change repaints only its own section */
+function sheetParts(s0) {
+  var s = viewStage(s0), st = computeStates(viewStages(), S.signoffs), x = st[s.id], ui = S.ui, act = canAct(s), editable = act && !x.done && !x.locked;
+  var sid = s.id, ps = pendSecs(sid), fl = S.inflight[sid], parts = [];
+  parts.push(["top", '<div class="sheet-top"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="mono muted">' + esc(PHASES[s.phase]) + '</span><span class="tag">' + esc(delivName(s.pid, s.deliv)) + '</span><span class="pill p-' + x.status + '">' + esc(STATUS_TXT[x.status]) + "</span>" + (x.overdue ? '<span class="pill" style="background:var(--red-soft);color:var(--red)">Overdue</span>' : "") + "</div><h2>" + esc(s.name) + '</h2></div><button class="sheet-close" data-act="close" aria-label="Close">&times;</button></div>']);
+  // description and gate
+  var g = '<p class="desc" style="margin-top:14px">' + esc(s.desc || "") + "</p>";
+  if (x.locked) g += '<div class="gate locked"><strong>Locked.</strong> Opens when these are signed off:<ul>' + x.blockers.map(function (b) { var bs = S.stages[b]; return '<li><button data-act="open" data-sid="' + esc(b) + '">' + esc(label(bs)) + ": " + esc(STATUS_TXT[st[b].status]).toLowerCase() + ", " + esc(ownerNames(bs)) + "</button></li>"; }).join("") + '</ul><p class="hint" style="margin:8px 0 0">You can still park files, links and notes here.</p></div>';
+  else if (x.status === "review") g += '<div class="gate review"><strong>Needs review.</strong> ' + esc(s.flagReason || "Something upstream changed.") + " Was signed off " + esc(fmtTime(x.so.at)) + ". Confirm it still holds, or reopen it.</div>";
+  else if (x.status === "overridden") g += '<div class="gate override"><strong>Overridden</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ". Reason: " + esc(x.so.reason || "") + "</div>";
+  else if (x.status === "done") g += '<div class="gate done"><strong>Signed off</strong> by ' + esc(who(x.so.by)) + " on " + esc(fmtTime(x.so.at)) + ".</div>";
+  parts.push(["gate", g]);
+  // owners and deadline
   var canEditMeta = S.canWrite && (S.isAdmin || isOwnerOf(s)), os = ownersOf(s);
-  h += '<div class="sec"><h4>Owners</h4><div class="owners">' + members().map(function (m) {
+  parts.push(["owners", '<div class="sec">' + secHead(sid, "owners", "Owners and deadline") + '<div class="owners">' + members().map(function (m) {
     var on = os.indexOf(m.id) >= 0;
     return '<button class="own" aria-pressed="' + on + '" data-act="own" data-mid="' + esc(m.id) + '" ' + (canEditMeta ? "" : "disabled") + ">" + esc(m.name) + (m.role ? '<small>' + esc(m.role) + "</small>" : "") + "</button>";
-  }).join("") + '</div><label class="field" style="margin-top:14px;max-width:240px">Deadline' + (s.dueAuto ? "" : " (set by hand)") + '<input type="date" data-act="due" value="' + esc(s.due || "") + '" ' + (canEditMeta ? "" : "disabled") + "></label></div>";
+  }).join("") + '</div><label class="field" style="margin-top:14px;max-width:240px">Deadline' + (s.dueAuto ? "" : " (set by hand)") + '<input type="date" data-act="due" value="' + esc(s.due || "") + '" ' + (canEditMeta ? "" : "disabled") + "></label>" + secFoot(sid, "owners", canEditMeta) + "</div>"]);
   // checklist
-  var ticks = s.ticks || {};
-  h += '<div class="sec"><h4>Checklist · ' + x.ticked + " of " + x.total + '</h4><ul class="checks">' + (s.items || []).map(function (it) {
+  var ticks = s.ticks || {}, canTick = S.canWrite && !x.done && !x.locked;
+  parts.push(["checklist", '<div class="sec">' + secHead(sid, "checklist", "Checklist · " + x.ticked + " of " + x.total) + '<ul class="checks">' + (s.items || []).map(function (it) {
     var tk = ticks[it.id];
-    return '<li class="check"><button class="tick" data-act="tick" data-item="' + esc(it.id) + '" aria-pressed="' + !!tk + '" aria-label="' + esc(it.t) + '" ' + (S.canWrite && !x.done && !x.locked ? "" : "disabled") + ">" + (tk ? "&#10003;" : "") + '</button><span class="check-t">' + esc(it.t) + (it.due ? '<span class="check-due' + (!tk && it.due < today() ? " late" : "") + '">Due ' + esc(fmtDate(it.due)) + (!tk && it.due < today() ? ", late" : "") + "</span>" : "") + (tk ? '<span class="check-by">' + esc(who(tk.by)) + ", " + esc(fmtTime(tk.at)) + "</span>" : "") + "</span>" +
+    return '<li class="check"><button class="tick" data-act="tick" data-item="' + esc(it.id) + '" aria-pressed="' + !!tk + '" aria-label="' + esc(it.t) + '" ' + (canTick ? "" : "disabled") + ">" + (tk ? "&#10003;" : "") + '</button><span class="check-t">' + esc(it.t) + (it.due ? '<span class="check-due' + (!tk && it.due < today() ? " late" : "") + '">Due ' + esc(fmtDate(it.due)) + (!tk && it.due < today() ? ", late" : "") + "</span>" : "") + (tk ? '<span class="check-by">' + esc(who(tk.by)) + ", " + esc(fmtTime(tk.at)) + "</span>" : "") + "</span>" +
       (S.isAdmin && !x.done ? '<button class="x" data-act="rm-item" data-item="' + esc(it.id) + '" aria-label="Remove item">&times;</button>' : "<span></span>") + "</li>";
-  }).join("") + "</ul>" + (S.canWrite && !x.done ? '<div class="row" style="margin-top:8px"><input class="inp" style="flex:1;min-width:160px" placeholder="Add a checklist item" data-keep="add-item"><button class="btn" data-act="add-item">Add</button></div>' : "") + "</div>";
-  if (s.rolesMin) h += renderRoles(s, x);
-  // client
+  }).join("") + "</ul>" + (S.canWrite && !x.done ? '<div class="row" style="margin-top:8px"><input class="inp" style="flex:1;min-width:160px" placeholder="Add a checklist item" data-keep="add-item"><button class="btn" data-act="add-item">Add</button></div>' : "") + secFoot(sid, "checklist", S.canWrite && !x.done) + "</div>"]);
+  if (s.rolesMin) parts.push(["roles", renderRoles(s, x)]);
+  // client approval
   if (s.clientReq) {
-    h += '<div class="sec"><h4>Client approval</h4>';
-    if (s.client && s.client.who) h += '<p style="margin:0">Approved by <strong>' + esc(s.client.who) + "</strong> on " + esc(fmtDate(s.client.date)) + (s.client.note ? ". " + esc(s.client.note) : "") + '</p><p class="hint" style="margin:4px 0 0">Recorded by ' + esc(who(s.client.by)) + ", " + esc(fmtTime(s.client.at)) + "</p>" + (editable ? '<button class="btn btn-quiet" data-act="client-clear">Clear</button>' : "");
-    else if (editable) h += '<div class="grid2"><label class="field">Who approved (client side)<input data-keep="cl-who"></label><label class="field">Date<input type="date" data-keep="cl-date" data-sticky value="' + today() + '"></label></div><label class="field" style="margin-top:10px">Where it\'s recorded (email, WhatsApp, link)<input data-keep="cl-note"></label><button class="btn" style="margin-top:10px" data-act="client-save">Record approval</button>';
-    else h += '<p class="hint" style="margin:0">Not recorded yet. ' + (x.locked ? "Opens when the stage unlocks." : "The owner records it before marking complete.") + "</p>";
-    h += "</div>";
+    var c = '<div class="sec">' + secHead(sid, "client", "Client approval");
+    if (s.client && s.client.who) c += '<p style="margin:0">Approved by <strong>' + esc(s.client.who) + "</strong> on " + esc(fmtDate(s.client.date)) + (s.client.note ? ". " + esc(s.client.note) : "") + '</p><p class="hint" style="margin:4px 0 0">Recorded by ' + esc(who(s.client.by)) + ", " + esc(fmtTime(s.client.at)) + "</p>" + (editable ? '<button class="btn btn-quiet" data-act="client-clear">Clear</button>' : "");
+    else if (editable) c += '<div class="grid2"><label class="field">Who approved (client side)<input data-keep="cl-who"></label><label class="field">Date<input type="date" data-keep="cl-date" data-sticky value="' + today() + '"></label></div><label class="field" style="margin-top:10px">Where it\'s recorded (email, WhatsApp, link)<input data-keep="cl-note"></label><button class="btn" style="margin-top:10px" data-act="client-save">Record approval</button>';
+    else c += '<p class="hint" style="margin:0">Not recorded yet. ' + (x.locked ? "Opens when the stage unlocks." : "The owner records it before marking complete.") + "</p>";
+    parts.push(["client", c + secFoot(sid, "client", editable) + "</div>"]);
   }
-  // actions
-  h += '<div class="sec"><div class="actions">';
+  // stage actions (these go through straight away)
+  var a = '<div class="sec"><div class="actions">';
   if (!x.done && x.status !== "review") {
-    if (x.ownerDone) h += '<p style="margin:0">Marked complete by <strong>' + esc(who(s.ownerDoneBy)) + "</strong>, " + esc(fmtTime(s.ownerDoneAt)) + ".</p>" + (act ? '<button class="btn" data-act="undo-done">Undo mark complete</button>' : "");
+    if (x.ownerDone) a += '<p style="margin:0">Marked complete by <strong>' + esc(who(s.ownerDoneBy)) + "</strong>, " + esc(fmtTime(s.ownerDoneAt)) + ".</p>" + (act ? '<button class="btn" data-act="undo-done">Undo mark complete</button>' : "");
     else {
-      var why = x.locked ? "Locked until the stages above are signed off." : !x.complete ? "Tick all " + x.total + " items first." : !x.rolesOk ? (x.rolesTotal ? x.rolesShort + " role" + (x.rolesShort > 1 ? "s have" : " has") + " fewer than " + s.rolesMin + " shortlisted options." : "Add every role and its shortlist first.") : !x.clientOk ? "Record the client approval first." : !act ? "Only " + ownerNames(s) + " (owner) or the team can mark this complete." : "";
-      h += '<button class="btn btn-primary" data-act="mark-done" ' + (why ? "disabled" : "") + ">Complete stage</button>" + (why ? '<span class="hint">' + esc(why) + "</span>" : '<span class="hint">Completes the stage and unlocks the next ones.</span>');
+      var why = ps.length || fl ? "Save your changes first." : x.locked ? "Locked until the stages above are signed off." : !x.complete ? "Tick all " + x.total + " items first." : !x.rolesOk ? (x.rolesTotal ? x.rolesShort + " role" + (x.rolesShort > 1 ? "s have" : " has") + " fewer than " + s.rolesMin + " shortlisted options." : "Add every role and its shortlist first.") : !x.clientOk ? "Record the client approval first." : !act ? "Only " + ownerNames(s) + " (owner) or the team can mark this complete." : "";
+      a += '<button class="btn btn-primary" data-act="mark-done" ' + (why ? "disabled" : "") + ">Complete stage</button>" + (why ? '<span class="hint">' + esc(why) + "</span>" : '<span class="hint">Completes the stage and unlocks the next ones.</span>');
     }
   }
   if (S.isAdmin) {
-    if (x.status === "awaiting") h += '<button class="btn btn-primary" data-act="signoff">Sign off</button>';
-    if (x.status === "review") h += '<button class="btn btn-primary" data-act="confirm">Still valid, keep signed off</button>';
+    if (x.status === "awaiting") a += '<button class="btn btn-primary" data-act="signoff">Sign off</button>';
+    if (x.status === "review") a += '<button class="btn btn-primary" data-act="confirm">Still valid, keep signed off</button>';
     if (!x.done && x.status !== "review") {
-      if (ui.override === s.id) h += '<label class="field">Why are you overriding this gate? This is logged.<textarea class="inp" data-keep="ov-reason"></textarea></label><div class="row"><button class="btn btn-danger" data-act="override">Override and mark done</button><button class="btn btn-quiet" data-act="ui" data-k="override" data-v="">Cancel</button></div>';
-      else h += '<button class="btn btn-quiet" data-act="ui" data-k="override" data-v="' + esc(s.id) + '">Override this gate</button>';
+      if (ui.override === s.id) a += '<label class="field">Why are you overriding this gate? This is logged.<textarea class="inp" data-keep="ov-reason"></textarea></label><div class="row"><button class="btn btn-danger" data-act="override">Override and mark done</button><button class="btn btn-quiet" data-act="ui" data-k="override" data-v="">Cancel</button></div>';
+      else a += '<button class="btn btn-quiet" data-act="ui" data-k="override" data-v="' + esc(s.id) + '">Override this gate</button>';
     }
   }
   if ((x.done || x.status === "review") && S.canWrite && (S.isAdmin || isOwnerOf(s))) {
-    if (ui.reopen === s.id) h += '<label class="field">What changed? Everything downstream gets flagged for review.<textarea class="inp" data-keep="ro-reason"></textarea></label><div class="row"><button class="btn btn-danger" data-act="reopen">Reopen stage</button><button class="btn btn-quiet" data-act="ui" data-k="reopen" data-v="">Cancel</button></div>';
-    else h += '<button class="btn btn-quiet" data-act="ui" data-k="reopen" data-v="' + esc(s.id) + '">Reopen (something changed)</button>';
+    if (ui.reopen === s.id) a += '<label class="field">What changed? Everything downstream gets flagged for review.<textarea class="inp" data-keep="ro-reason"></textarea></label><div class="row"><button class="btn btn-danger" data-act="reopen">Reopen stage</button><button class="btn btn-quiet" data-act="ui" data-k="reopen" data-v="">Cancel</button></div>';
+    else a += '<button class="btn btn-quiet" data-act="ui" data-k="reopen" data-v="' + esc(s.id) + '">Reopen (something changed)</button>';
   }
-  h += "</div></div>";
-  h += renderFiles(s);
-  // comments
-  var cm = s.comments || {}, cs = Object.keys(cm).filter(function (k) { return cm[k]; }).map(function (k) { return cm[k]; }).sort(function (a, b) { return a.at - b.at; });
-  h += '<div class="sec"><h4>Notes</h4>' + cs.map(function (c) { return '<div class="comment"><span class="c-by"><strong>' + esc(who(c.by)) + "</strong>, " + esc(fmtTime(c.at)) + "</span><p>" + esc(c.text) + "</p></div>"; }).join("") +
-    (S.canWrite ? '<textarea class="inp" style="margin-top:8px" placeholder="Decisions, open questions, what the DOP said" data-keep="cm-text"></textarea><button class="btn" style="margin-top:8px" data-act="comment">Post note</button>' : "") + "</div>";
-  // history
+  parts.push(["actions", a + "</div></div>"]);
+  parts.push(["files", renderFiles(s)]);
+  parts.push(["notes", renderNotes(s)]);
   var hist = [];
   if (s.reopenedAt) hist.push("Reopened " + fmtTime(s.reopenedAt) + (s.reopenReason ? ": " + s.reopenReason : ""));
   if (s.flaggedAt) hist.push("Flagged for review " + fmtTime(s.flaggedAt) + (s.flagReason ? ": " + s.flagReason : ""));
-  if (hist.length) h += '<div class="sec"><h4>History</h4><ul class="hist">' + hist.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
-  return h + "</div></aside>";
+  if (hist.length) parts.push(["history", '<div class="sec"><h4>History</h4><ul class="hist">' + hist.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>"]);
+  // save-all bar
+  if (S.canWrite) parts.push(["bar", '<div class="savebar' + (ps.length ? " dirty" : "") + '"><span class="hint">' +
+    (fl ? "Saving " + fl.secs.map(function (k) { return SECS[k].toLowerCase(); }).join(", ") + "…" : ps.length ? "Unsaved: " + esc(ps.map(function (k) { return SECS[k]; }).join(", ")) : "Everything on this stage is saved.") + '</span><div class="row">' +
+    (ps.length && !fl ? '<button class="btn btn-quiet" data-act="discard-all">Discard all</button>' : "") +
+    '<button class="btn' + (ps.length ? " btn-primary" : "") + '" data-act="save-all"' + (fl ? " disabled" : "") + ">" + (fl ? "Saving…" : "Save all") + "</button></div></div>"]);
+  return parts;
 }
 
 
 function renderRoles(s, x) {
   var edit = S.canWrite && !x.done, roles = Object.keys(s.roles || {}).filter(function (k) { return s.roles[k]; }).map(function (k) { return Object.assign({ k: k }, s.roles[k]); }).sort(function (a, b) { return a.at - b.at; });
-  var h = '<div class="sec"><h4>Roles and shortlists</h4><p class="hint" style="margin:0 0 10px">Minimum ' + s.rolesMin + " shortlisted options for every role. Casting can't be marked complete until every role has them.</p>";
+  var h = '<div class="sec">' + secHead(s.id, "roles", "Roles and shortlists") + '<p class="hint" style="margin:0 0 10px">Minimum ' + s.rolesMin + " shortlisted options for every role. Casting can't be marked complete until every role has them.</p>";
   roles.forEach(function (r) {
     var opts = Object.keys(r.options || {}).filter(function (k) { return r.options[k]; }).map(function (k) { return Object.assign({ k: k }, r.options[k]); }).sort(function (a, b) { return a.at - b.at; });
     var n = opts.length, ok = n >= s.rolesMin;
@@ -1124,7 +1323,7 @@ function renderRoles(s, x) {
     h += "</div>";
   });
   if (edit) h += '<div class="row" style="margin-top:10px"><input class="inp" style="flex:1;min-width:160px" placeholder="Role, e.g. Kabir (5), Mother" data-keep="role-new"><button class="btn" data-act="add-role">Add role</button></div>';
-  return h + "</div>";
+  return h + secFoot(s.id, "roles", edit) + "</div>";
 }
 var EXT = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", mp4: "video/mp4", m4v: "video/mp4", webm: "video/webm", pdf: "application/pdf", csv: "text/csv", md: "text/markdown", json: "application/json", txt: "text/plain" };
 function extOf(n) { return (String(n).split(".").pop() || "").toLowerCase(); }
@@ -1168,7 +1367,7 @@ function fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Ma
 function renderFiles(s) {
   var fs = s.files || {}, files = Object.keys(fs).filter(function (k) { return fs[k]; }).map(function (k) { return Object.assign({ k: k }, fs[k]); }).sort(function (a, b) { return a.at - b.at; });
   var links = s.links || {}, lk = Object.keys(links).filter(function (k) { return links[k]; }).map(function (k) { return Object.assign({ k: k }, links[k]); }).sort(function (a, b) { return a.at - b.at; });
-  var h = '<div class="sec dropzone" data-drop="1"><h4>Files and links</h4>';
+  var h = '<div class="sec dropzone" data-drop="1">' + secHead(s.id, "files", "Files and links");
   if (files.length) h += '<div class="files">' + files.map(function (f) {
     var url = assetUrl(f.asset), t = f.type || "", media;
     if (t.indexOf("image/") === 0) media = '<a href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="' + esc(f.name) + '" loading="lazy"></a>';
@@ -1179,17 +1378,17 @@ function renderFiles(s) {
   if (lk.length) h += '<ul class="links">' + lk.map(function (l) { return '<li><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label || l.url) + '</a><span class="hint">' + esc(who(l.by)) + "</span>" + (S.canWrite ? '<button class="x" data-act="rm-link" data-k="' + esc(l.k) + '" aria-label="Remove link">&times;</button>' : "") + "</li>"; }).join("") + "</ul>";
   if (!files.length && !lk.length) h += '<p class="hint" style="margin:0 0 10px">Decks, references, boards, casting tapes, recce photos. Keep them here, not in WhatsApp.</p>';
   if (S.canWrite) {
-    h += S.assets ? '<div class="upload"><label class="btn btn-primary"><input type="file" multiple hidden data-act="upload" accept="image/*,video/mp4,video/webm,application/pdf,.csv,.md,.txt,.json">' + (S.uploading ? "Uploading " + S.uploading + "…" : "Upload files") + '</label><span class="hint">Or drop files here. Images, PDF, MP4 and WebM, up to 20 MB each. For audio, MOV or anything bigger, add a Drive link.</span></div>'
+    h += S.assets ? '<div class="upload"><label class="btn btn-primary"><input type="file" multiple hidden data-act="upload" accept="image/*,video/mp4,video/webm,application/pdf,.csv,.md,.txt,.json">' + (S.uploading ? "Uploading " + S.uploading + "…" : "Upload files") + '</label><span class="hint">Or drop files here. Uploads save as soon as they finish. Images, PDF, MP4 and WebM, up to 20 MB each. For audio, MOV or anything bigger, add a Drive link.</span></div>'
       : '<p class="hint">Uploading needs Editor access on this page. Links work for everyone.</p>';
     h += '<div class="row" style="margin-top:10px"><input class="inp" style="flex:1;min-width:120px" placeholder="Label" data-keep="lk-label"><input class="inp" style="flex:2;min-width:160px" placeholder="https://" data-keep="lk-url"><button class="btn" data-act="add-link">Add link</button></div>';
   }
-  return h + "</div>";
+  return h + secFoot(s.id, "files", S.canWrite) + "</div>";
 }
 
 /* ---------- actions ---------- */
 function val(k) { var el = document.querySelector('[data-keep="' + k + '"]'); return el ? el.value.trim() : ""; }
 function clearVal(k) { var el = document.querySelector('[data-keep="' + k + '"]'); if (el) el.value = ""; }
-function cur() { return S.stages[S.route.stage]; }
+function cur() { return viewStage(S.stages[S.route.stage]); }
 function downstream(sid) {
   var out = {}, rev = {};
   Object.keys(S.stages).forEach(function (id) { (S.stages[id].after || []).forEach(function (a) { (rev[a] = rev[a] || []).push(id); }); });
@@ -1201,8 +1400,8 @@ var A = {
   goproj: function (d) { go({ v: "project", pid: d.pid, tab: "pipeline" }); },
   tab: function (d) { go({ v: "project", pid: S.route.pid, tab: d.tab }); },
   filter: function (d) { S.route.filter = d.f; render(); },
-  open: function (d) { S.ui = {}; S.freshSheet = true; go({ v: "project", pid: S.route.pid, tab: S.route.tab, stage: d.sid }); },
-  close: function () { S.ui = {}; S.freshSheet = true; go({ v: "project", pid: S.route.pid, tab: S.route.tab }); },
+  open: function (d) { if (d.sid === S.route.stage) return; if (!leaveSheetOk()) return; S.ui = {}; S.freshSheet = true; go({ v: "project", pid: S.route.pid, tab: S.route.tab, stage: d.sid }); },
+  close: function () { if (!leaveSheetOk()) return; S.ui = {}; S.freshSheet = true; go({ v: "project", pid: S.route.pid, tab: S.route.tab }); },
   ui: function (d) { S.ui[d.k] = d.v || null; render(); },
   claim: function (d) { if (!S.me.id) return; upd("team/" + d.mid, { userId: S.me.id }).then(function () { toast("You're " + memberName(d.mid) + " here now."); }); },
   "claim-new": function () {
@@ -1215,30 +1414,34 @@ var A = {
     var id = slug(n) + "-" + uid().slice(-4); put("team/" + id, { id: id, name: n, role: val("tm-role"), email: val("tm-email"), userId: null, order: members().length }).then(function () { clearVal("tm-name"); clearVal("tm-role"); if (curPid) logIt(curPid, "added " + n + " to the team"); });
   },
   tick: function (d) {
-    var s = cur(), x = computeStates(S.stages, S.signoffs)[s.id]; if (x.locked || x.done) return;
-    var it = (s.items || []).filter(function (i) { return i.id === d.item; })[0], on = !(s.ticks || {})[d.item], patch = { ticks: {} };
+    var s = cur(), x = computeStates(viewStages(), S.signoffs)[s.id]; if (x.locked || x.done) return;
+    var it = (s.items || []).filter(function (i) { return i.id === d.item; })[0]; if (!it) return;
+    var on = !(s.ticks || {})[d.item], patch = { ticks: {} };
     patch.ticks[d.item] = on ? { by: S.me.id, at: Date.now() } : null;
     if (!on && x.ownerDone) patch.ownerDoneAt = 0;
-    upd(stagePath(s.pid, s.id), patch).then(function () { logIt(s.pid, (on ? "ticked " : "unticked ") + '"' + it.t + '" on ' + label(s) + (!on && x.ownerDone ? " (sent back from sign-off)" : "")); });
+    stageEdit("checklist", patch, (on ? "ticked " : "unticked ") + '"' + it.t + '" on ' + label(s) + (!on && x.ownerDone ? " (sent back from sign-off)" : ""));
   },
   "add-item": function () {
     var s = cur(), t = val("add-item"); if (!t) return;
-    var items = (s.items || []).concat([{ id: "c" + uid(), t: t }]), x = computeStates(S.stages, S.signoffs)[s.id], patch = { items: items };
+    var items = (s.items || []).concat([{ id: "c" + uid(), t: t }]), x = computeStates(viewStages(), S.signoffs)[s.id], patch = { items: items };
     if (x.ownerDone) patch.ownerDoneAt = 0;
-    upd(stagePath(s.pid, s.id), patch).then(function () { clearVal("add-item"); logIt(s.pid, 'added checklist item "' + t + '" to ' + label(s)); });
+    clearVal("add-item");
+    return stageEdit("checklist", patch, 'added checklist item "' + t + '" to ' + label(s));
   },
   "rm-item": function (d) {
-    var s = cur(), it = (s.items || []).filter(function (i) { return i.id === d.item; })[0];
-    if (!confirm('Remove "' + it.t + '" from the checklist?')) return;
-    upd(stagePath(s.pid, s.id), { items: (s.items || []).filter(function (i) { return i.id !== d.item; }) }).then(function () { logIt(s.pid, 'removed checklist item "' + it.t + '" from ' + label(s)); });
+    var s = cur(), it = (s.items || []).filter(function (i) { return i.id === d.item; })[0]; if (!it) return;
+    var patch = { items: (s.items || []).filter(function (i) { return i.id !== d.item; }), ticks: {} }; patch.ticks[d.item] = null;
+    stageEdit("checklist", patch, 'removed checklist item "' + it.t + '" from ' + label(s));
   },
   "client-save": function () {
-    var s = cur(), w = val("cl-who"), dt = val("cl-date"); if (!w || !dt) return toast("Add who approved and when.");
-    upd(stagePath(s.pid, s.id), { client: { who: w, date: dt, note: val("cl-note"), by: S.me.id, at: Date.now() } }).then(function () { logIt(s.pid, "recorded client approval from " + w + " on " + label(s)); });
+    var s = cur(), w = val("cl-who"), dt = val("cl-date"); if (!w || !dt) { toast("Add who approved and when."); return false; }
+    var note = val("cl-note"); clearVal("cl-who"); clearVal("cl-note");
+    return stageEdit("client", { client: { who: w, date: dt, note: note, by: S.me.id, at: Date.now() } }, "recorded client approval from " + w + " on " + label(s));
   },
-  "client-clear": function () { var s = cur(); upd(stagePath(s.pid, s.id), { client: null, ownerDoneAt: 0 }).then(function () { logIt(s.pid, "cleared the client approval on " + label(s)); }); },
+  "client-clear": function () { var s = cur(); stageEdit("client", { client: null, ownerDoneAt: 0 }, "cleared the client approval on " + label(s)); },
   "mark-done": function () {
     var s = cur(), x = computeStates(S.stages, S.signoffs)[s.id];
+    if (pendSecs(s.id).length || S.inflight[s.id]) return toast("Save your changes first.");
     if (x.locked || !x.complete || !x.clientOk || !x.rolesOk || !canAct(s)) return;
     var now = Date.now();
     upd(stagePath(s.pid, s.id), { ownerDoneAt: now, ownerDoneBy: S.me.id })
@@ -1261,7 +1464,7 @@ var A = {
       .then(function () { ownersOf(s).forEach(function (mid) { notice(mid, { kind: "signed", pid: s.pid, sid: s.id, text: label(s) + " was overridden" }); }); S.ui.override = null; logIt(s.pid, "OVERRODE the gate on " + label(s) + ". Reason: " + r); });
   },
   reopen: function () {
-    var s = cur(), r = val("ro-reason"); if (r.length < 5) return toast("Say what changed.");
+    var s = S.stages[S.route.stage], r = val("ro-reason"); if (r.length < 5) return toast("Say what changed.");
     var now = Date.now(), st = computeStates(S.stages, S.signoffs), ds = downstream(s.id);
     upd(stagePath(s.pid, s.id), { reopenedAt: now, reopenReason: r, ownerDoneAt: 0 }).then(function () {
       var hit = [];
@@ -1276,38 +1479,42 @@ var A = {
   own: function (d) {
     var s = cur(), os = ownersOf(s).slice(), i = os.indexOf(d.mid);
     if (i >= 0) { if (os.length === 1) return toast("A stage needs at least one owner."); os.splice(i, 1); } else os.push(d.mid);
-    if (i < 0) notice(d.mid, { kind: "assigned", pid: s.pid, sid: s.id, text: "You were made an owner of " + label(s) });
-    upd(stagePath(s.pid, s.id), { owners: os }).then(function () { logIt(s.pid, (i >= 0 ? "removed " : "added ") + memberName(d.mid) + (i >= 0 ? " as owner of " : " as owner of ") + label(s)); });
+    stageEdit("owners", { owners: os }, (i >= 0 ? "removed " : "added ") + memberName(d.mid) + " as owner of " + label(s));
   },
   "add-role": function () {
     var s = cur(), n = val("role-new"); if (!n) return;
     var patch = { roles: {} }; patch.roles["r" + uid()] = { name: n, options: {}, pick: null, at: Date.now(), by: S.me.id };
-    (s.roles ? upd(stagePath(s.pid, s.id), patch) : upd(stagePath(s.pid, s.id), { roles: patch.roles })).then(function () { clearVal("role-new"); logIt(s.pid, "added role " + n + " to " + label(s)); });
+    clearVal("role-new");
+    return stageEdit("roles", patch, "added role " + n + " to " + label(s));
   },
-  "rm-role": function (d) { var s = cur(), r = s.roles[d.r]; if (!confirm("Remove the role " + r.name + " and its options?")) return; var patch = { roles: {} }; patch.roles[d.r] = null; upd(stagePath(s.pid, s.id), patch).then(function () { logIt(s.pid, "removed role " + r.name + " from " + label(s)); }); },
+  "rm-role": function (d) { var s = cur(), r = (s.roles || {})[d.r]; if (!r) return; var patch = { roles: {} }; patch.roles[d.r] = null; stageEdit("roles", patch, "removed role " + r.name + " from " + label(s)); },
   "add-opt": function (d) {
-    var s = cur(), n = val("op-" + d.r + "-n"), l = val("op-" + d.r + "-l"); if (!n) return toast("Add the actor's name.");
-    if (l && !/^https?:\/\//i.test(l)) return toast("Links need to start with https://");
+    var s = cur(), r = (s.roles || {})[d.r], n = val("op-" + d.r + "-n"), l = val("op-" + d.r + "-l"); if (!r) return;
+    if (!n) { toast("Add the actor's name."); return false; }
+    if (l && !/^https?:\/\//i.test(l)) { toast("Links need to start with https://"); return false; }
     var patch = { roles: {} }; patch.roles[d.r] = { options: {} }; patch.roles[d.r].options["o" + uid()] = { name: n, link: l, by: S.me.id, at: Date.now() };
-    upd(stagePath(s.pid, s.id), patch).then(function () { clearVal("op-" + d.r + "-n"); clearVal("op-" + d.r + "-l"); logIt(s.pid, "shortlisted " + n + " for " + s.roles[d.r].name); });
+    clearVal("op-" + d.r + "-n"); clearVal("op-" + d.r + "-l");
+    return stageEdit("roles", patch, "shortlisted " + n + " for " + r.name);
   },
-  "rm-opt": function (d) { var s = cur(), r = s.roles[d.r], o = r.options[d.o], patch = { roles: {} }; patch.roles[d.r] = { options: {} }; patch.roles[d.r].options[d.o] = null; if (r.pick === d.o) patch.roles[d.r].pick = null; upd(stagePath(s.pid, s.id), patch).then(function () { logIt(s.pid, "removed " + o.name + " from the " + r.name + " shortlist"); }); },
-  "pick-opt": function (d) { var s = cur(), r = s.roles[d.r], on = r.pick !== d.o, patch = { roles: {} }; patch.roles[d.r] = { pick: on ? d.o : null }; upd(stagePath(s.pid, s.id), patch).then(function () { logIt(s.pid, (on ? "picked " : "unpicked ") + r.options[d.o].name + " for " + r.name); }); },
+  "rm-opt": function (d) { var s = cur(), r = (s.roles || {})[d.r], o = r && (r.options || {})[d.o]; if (!o) return; var patch = { roles: {} }; patch.roles[d.r] = { options: {} }; patch.roles[d.r].options[d.o] = null; if (r.pick === d.o) patch.roles[d.r].pick = null; stageEdit("roles", patch, "removed " + o.name + " from the " + r.name + " shortlist"); },
+  "pick-opt": function (d) { var s = cur(), r = (s.roles || {})[d.r], o = r && (r.options || {})[d.o]; if (!o) return; var on = r.pick !== d.o, patch = { roles: {} }; patch.roles[d.r] = { pick: on ? d.o : null }; stageEdit("roles", patch, (on ? "picked " : "unpicked ") + o.name + " for " + r.name); },
   "rm-file": function (d) {
-    var s = cur(), f = s.files[d.k]; if (!confirm("Remove " + f.name + "?")) return;
+    var s = cur(), f = (s.files || {})[d.k]; if (!f) return;
     var patch = { files: {} }; patch.files[d.k] = null;
-    upd(stagePath(s.pid, s.id), patch).then(function () { if (S.assets) S.assets.delete(f.asset).catch(function () {}); logIt(s.pid, "removed file " + f.name + " from " + label(s)); });
+    stageEdit("files", patch, "removed file " + f.name + " from " + label(s));
   },
   "add-link": function () {
-    var s = cur(), u = val("lk-url"), l = val("lk-label"); if (!/^https?:\/\//i.test(u)) return toast("Paste a full link starting with https://");
+    var s = cur(), u = val("lk-url"), l = val("lk-label"); if (!/^https?:\/\//i.test(u)) { toast("Paste a full link starting with https://"); return false; }
     var patch = { links: {} }; patch.links["l" + uid()] = { label: l || u, url: u, by: S.me.id, at: Date.now() };
-    upd(stagePath(s.pid, s.id), patch).then(function () { clearVal("lk-url"); clearVal("lk-label"); logIt(s.pid, "added a link to " + label(s) + ": " + (l || u)); });
+    clearVal("lk-url"); clearVal("lk-label");
+    return stageEdit("files", patch, "added a link to " + label(s) + ": " + (l || u));
   },
-  "rm-link": function (d) { var s = cur(), patch = { links: {} }; patch.links[d.k] = null; upd(stagePath(s.pid, s.id), patch).then(function () { logIt(s.pid, "removed a link from " + label(s)); }); },
+  "rm-link": function (d) { var s = cur(); if (!(s.links || {})[d.k]) return; var patch = { links: {} }; patch.links[d.k] = null; stageEdit("files", patch, "removed a link from " + label(s)); },
   comment: function () {
     var s = cur(), t = val("cm-text"); if (!t) return;
-    var patch = { comments: {} }; patch.comments["m" + uid()] = { text: t, by: S.me.id, at: Date.now() }; notifyMentions(t, { pid: s.pid, sid: s.id, where: "notes on " + label(s) });
-    upd(stagePath(s.pid, s.id), patch).then(function () { clearVal("cm-text"); });
+    var patch = { comments: {} }; patch.comments["m" + uid()] = { text: t, by: S.me.id, at: Date.now() };
+    clearVal("cm-text");
+    return stageEdit("notes", patch, null);
   },
   "ps-save": function () {
     var p = S.projects[S.route.pid], np = { name: val("ps-name") || p.name, client: val("ps-client"), ppmDate: val("ps-ppm") || p.ppmDate, shootDate: val("ps-shoot") || p.shootDate };
@@ -1357,8 +1564,8 @@ document.addEventListener("click", function (e) {
 document.addEventListener("change", function (e) {
   var el = e.target, a = el.getAttribute && el.getAttribute("data-act"), s = cur(); if (!s || !S.canWrite) return;
   if (a === "upload") { uploadFiles(s, el.files); el.value = ""; return; }
-  if (a === "owner") upd(stagePath(s.pid, s.id), { owner: el.value }).then(function () { logIt(s.pid, "made " + memberName(el.value) + " owner of " + label(s)); });
-  if (a === "due" && el.value) upd(stagePath(s.pid, s.id), { due: el.value, dueAuto: false }).then(function () { logIt(s.pid, "moved the deadline of " + label(s) + " to " + fmtDate(el.value)); });
+  if (a === "owner") stageEdit("owners", { owners: [el.value] }, "made " + memberName(el.value) + " owner of " + label(s));
+  if (a === "due" && el.value && el.value !== s.due) stageEdit("owners", { due: el.value, dueAuto: false }, "moved the deadline of " + label(s) + " to " + fmtDate(el.value));
 });
 document.addEventListener("dragover", function (e) { var z = e.target.closest && e.target.closest("[data-drop]"); if (z && S.assets) { e.preventDefault(); z.classList.add("over"); } });
 document.addEventListener("dragleave", function (e) { var z = e.target.closest && e.target.closest("[data-drop]"); if (z) z.classList.remove("over"); });
@@ -1440,7 +1647,7 @@ function loadAlerts() {
         proj: n.pid && S.projects[n.pid] ? S.projects[n.pid].name : "" });
     });
     out.sort(function (a, b) { return ALERT_ORDER.indexOf(a.kind) - ALERT_ORDER.indexOf(b.kind) || ((a.due || "9") < (b.due || "9") ? -1 : (a.due || "9") > (b.due || "9") ? 1 : (b.at || 0) - (a.at || 0)); });
-    S.alerts = out; checkAck(); render(); alarm(out);
+    S.alerts = out; checkAck(); renderSoon(); alarm(out);
   }).catch(function () {});
 }
 function checkAck() {
@@ -1580,7 +1787,7 @@ function fmtMsg(t) {
 function subChat(room, arr) {
   if (!S.db) return;
   arr.push(S.db.collection("chat/" + room + "/msgs").orderBy("at", "desc").limit(200).onSnapshot(function (snap) {
-    S.chat[room] = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).reverse(); render();
+    S.chat[room] = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).reverse(); renderSoon();
   }, function () {}));
 }
 function chatBadge(room) {
@@ -1993,9 +2200,9 @@ function backend() {
     var ident = S.user ? Promise.all([S.user.me(), S.user.can("data.write")]) : Promise.resolve([{ id: null, name: "", avatarUrl: "", canEdit: false }, null]);
     return ident.then(function (w) {
       S.me = w[0]; S.isAdmin = true; S.canWrite = w[1] !== false;
-      B.use("assets").then(function (a) { S.assets = a; render(); });
+      B.use("assets").then(function (a) { S.assets = a; renderSoon(); });
       ensureChat("all"); var got = { t: false, p: false };
-      function ready() { if (got.t && got.p && !S.ready) { S.ready = true; onRoute(); seedRestore(); } else render(); if (S.ready) alertsSoon(); }
+      function ready() { if (got.t && got.p && !S.ready) { S.ready = true; onRoute(); seedRestore(); } else renderSoon(); if (S.ready) alertsSoon(); }
       subs.base.push(S.db.collection("team").onSnapshot(function (snap) { var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); S.team = o; got.t = true; ready(); }, function (e) { toast(errMsg(e)); }));
       subs.base.push(S.db.collection("projects").onSnapshot(function (snap) { var o = {}; snap.docs.forEach(function (d) { o[d.id] = Object.assign({ id: d.id }, d.data()); }); var first = !got.p; S.projects = o; got.p = true; ready(); if (!first && S.route.v === "home") loadHomeStats(); }, function (e) { toast(errMsg(e)); }));
     });
