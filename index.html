@@ -1190,19 +1190,20 @@ function secFoot(sid, k, show) {
   return '<div class="sec-save">' + (P[k] && !saving ? '<button class="btn btn-quiet" data-act="sec-discard" data-sec="' + k + '">Discard</button>' : "") +
     '<button class="btn' + (P[k] ? " btn-primary" : "") + '" data-act="sec-save" data-sec="' + k + '"' + (busy ? " disabled" : "") + ">" + (saving ? "Saving…" : "Save " + SECS[k].toLowerCase()) + "</button></div>";
 }
-A["sec-save"] = function (d) { saveSecs([d.sec]); };
-A["sec-discard"] = function (d) { discardSecs(S.route.stage, [d.sec]); render(); };
-A["save-all"] = function () { saveSecs(SEC_ORDER); };
-A["discard-all"] = function () { var sid = S.route.stage, ps = pendSecs(sid); if (!ps.length) return; if (!confirm("Discard unsaved changes in " + ps.map(function (k) { return SECS[k]; }).join(", ") + "?")) return; discardSecs(sid, ps); render(); };
+var SHEET_ACTS = {}; // merged into A once A exists (below)
+SHEET_ACTS["sec-save"] = function (d) { saveSecs([d.sec]); };
+SHEET_ACTS["sec-discard"] = function (d) { discardSecs(S.route.stage, [d.sec]); render(); };
+SHEET_ACTS["save-all"] = function () { saveSecs(SEC_ORDER); };
+SHEET_ACTS["discard-all"] = function () { var sid = S.route.stage, ps = pendSecs(sid); if (!ps.length) return; if (!confirm("Discard unsaved changes in " + ps.map(function (k) { return SECS[k]; }).join(", ") + "?")) return; discardSecs(sid, ps); render(); };
 
 /* notes: edit and delete */
 function canEditNote(c) { return S.canWrite && (S.isAdmin || c.by === S.me.id); }
-A["note-edit"] = function (d) {
+SHEET_ACTS["note-edit"] = function (d) {
   S.ui.editNote = d.k; render();
   setTimeout(function () { var t = document.querySelector('[data-keep="cm-edit-' + d.k + '"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 30);
 };
-A["note-cancel"] = function () { S.ui.editNote = null; render(); };
-A["note-done"] = function (d) {
+SHEET_ACTS["note-cancel"] = function () { S.ui.editNote = null; render(); };
+SHEET_ACTS["note-done"] = function (d) {
   var s = cur(), c = ((s && s.comments) || {})[d.k]; if (!c) { S.ui.editNote = null; render(); return; }
   var t = val("cm-edit-" + d.k);
   if (!t) { toast("A note can't be empty. Use Delete to remove it."); return false; }
@@ -1211,7 +1212,7 @@ A["note-done"] = function (d) {
   var patch = { comments: {} }; patch.comments[d.k] = { text: t, editedAt: Date.now(), editedBy: S.me.id };
   return stageEdit("notes", patch, "edited a note on " + label(s));
 };
-A["note-del"] = function (d) {
+SHEET_ACTS["note-del"] = function (d) {
   var s = cur(), c = ((s && s.comments) || {})[d.k]; if (!c) return;
   if (S.ui.editNote === d.k) S.ui.editNote = null;
   var patch = { comments: {} }; patch.comments[d.k] = null;
@@ -1554,6 +1555,7 @@ var A = {
       .catch(function () { if (btn) { btn.disabled = false; btn.textContent = "Create production"; } });
   }
 };
+Object.assign(A, SHEET_ACTS);
 document.addEventListener("click", function (e) {
   var el = e.target.closest("[data-act]"); if (!el || el.tagName === "SELECT" || (el.tagName === "INPUT")) return;
   var fn = A[el.getAttribute("data-act")]; if (!fn) return;
